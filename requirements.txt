@@ -1,0 +1,44 @@
+Flask==3.1.0
+PyMySQL==1.1.1
+
+# OBLIGATORIA con MySQL 8, aunque no la importe ningún archivo del proyecto.
+# MySQL 8 autentica con caching_sha2_password y PyMySQL necesita este paquete
+# para ese saludo inicial. El error engaña porque aparece de repente: MySQL
+# cachea la contraseña tras el primer login y mientras esa caché está tibia
+# usa un camino rápido que no la necesita. Al reiniciar el servidor se vacía
+# y ahí revienta con:
+#   RuntimeError: 'cryptography' package is required for sha256_password
+#                 or caching_sha2_password auth methods
+cryptography==46.0.3
+python-dotenv==1.0.1
+
+# Firma los tokens de los enlaces de verificar correo y recuperar contraseña
+# (config/enlaces.py). Flask ya lo instala para firmar la cookie de sesión,
+# pero acá se importa directo, así que se declara.
+itsdangerous==2.2.0
+bcrypt==5.0.0
+
+# zoneinfo (de la biblioteca estándar) NO trae las zonas horarias: las lee del
+# sistema operativo. Linux y macOS las tienen; Windows no trae ninguna, así que
+# ZoneInfo("America/Santiago") revienta con ZoneInfoNotFoundError.
+# Este paquete es esa base de datos. En Linux sobra y no molesta.
+#
+# Ojo con la versión: esto NO es una librería, es la tabla de husos horarios
+# del mundo. Una versión vieja significa reglas de horario de verano viejas, y
+# Chile cambia sus fechas por decreto de vez en cuando. Conviene subirla una
+# vez al año.
+tzdata==2026.3
+
+# El QR del voucher de los eventos (config/qr.py). Es Python puro y dibuja
+# SVG, así que NO arrastra Pillow ni compila nada.
+#
+# La app funciona sin él: config/qr.py lo importa dentro de un try y, si
+# falta, el voucher sale igual con su código en letras grandes, que es lo que
+# de verdad se usa en el mesón. Un adorno no puede impedir que arranque.
+qrcode==8.2
+
+# El servidor que atiende en producción. El de Flask (app.run) es para
+# desarrollo: atiende de a una petición, se cae con cualquier cosa y con
+# debug=True deja ejecutar código desde el navegador. En Railway arranca
+# gunicorn, con el comando que está en el Procfile.
+gunicorn==23.0.0

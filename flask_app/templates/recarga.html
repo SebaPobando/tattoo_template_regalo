@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Recargar puntos · {{ negocio.nombre }}{% endblock %}
+{% block descripcion %}Estamos afinando los paquetes de recarga. Muy pronto podrás comprar {{ negocio.puntos.nombre }} aquí.{% endblock %}
+{% block contenido %}
+<main class="auth"><div class="auth__card">
+{% if negocio.mascotas %}<img class="auth__mascot" src="{{ mascota('en-construccion.png') }}" alt="" aria-hidden="true" />{% endif %}
+<div class="auth__eyebrow">Próximamente</div>
+<h1 class="auth__title">Recarga de {{ negocio.puntos.nombre }}</h1>
+<p class="auth__lead">Estamos afinando los paquetes de recarga. Muy pronto podrás comprar {{ negocio.puntos.nombre }} aquí.</p>
+<a class="btn btn--primary" href="{{ url_for('dashboard') }}">Volver al dashboard</a>
+</div></main>
+{% endblock %}

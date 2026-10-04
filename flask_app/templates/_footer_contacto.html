@@ -1,0 +1,26 @@
+{#
+  Bloque compartido por todos los footers de {{ negocio.nombre_corto }}. Los datos y enlaces
+  viven en un solo lugar para que una plantilla no vuelva a quedar con el
+  correo, el telefono o las redes antiguas.
+#}
+<div>
+  <h4 class="footer__title">Síguenos</h4>
+  <p class="footer__text" style="max-width: none;">
+    {{ negocio.correo }}<br />
+    {{ negocio.telefono }}
+  </p>
+  <div class="footer__social">
+    <a href="{{ negocio.instagram_url }}" target="_blank" rel="noopener noreferrer" aria-label="Instagram de {{ negocio.nombre }}">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+        <rect x="3" y="3" width="18" height="18" rx="5" />
+        <circle cx="12" cy="12" r="4" />
+        <circle cx="17.5" cy="6.5" r="1" />
+      </svg>
+    </a>
+    <a href="{{ negocio.whatsapp_url }}" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp de {{ negocio.nombre }}">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+        <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.38 1.26 4.79L2 22l5.44-1.36a9.9 9.9 0 0 0 4.6 1.14h.01c5.46 0 9.9-4.45 9.9-9.91 0-2.65-1.03-5.13-2.9-7-1.87-1.88-4.35-2.87-7.01-2.87Zm0 1.67c2.22 0 4.3.86 5.87 2.43a8.23 8.23 0 0 1 2.43 5.83c0 4.55-3.72 8.25-8.3 8.25a8.3 8.3 0 0 1-4.22-1.15l-.3-.18-3.23.81.86-3.14-.2-.32a8.2 8.2 0 0 1-1.27-4.4c0-4.56 3.72-8.13 8.36-8.13Zm-4.42 4.4c-.16 0-.42.06-.64.31s-.85.83-.85 2.02.87 2.35.99 2.51c.12.16 1.7 2.6 4.13 3.64 2.03.87 2.44.7 2.88.66.44-.04 1.42-.58 1.62-1.15.2-.56.2-1.04.14-1.15-.06-.1-.22-.16-.46-.28-.24-.12-1.42-.7-1.64-.78-.22-.08-.38-.12-.54.12-.16.24-.62.78-.76.94-.14.16-.28.18-.52.06-.24-.12-1.01-.37-1.92-1.18-.71-.63-1.19-1.4-1.33-1.64-.14-.24-.02-.37.1-.49.11-.11.24-.28.36-.42.12-.14.16-.24.24-.4.08-.16.04-.3-.02-.42-.06-.12-.54-1.32-.75-1.8-.2-.47-.4-.4-.54-.41-.14-.01-.3-.01-.46-.01Z" />
+      </svg>
+    </a>
+  </div>
+</div>

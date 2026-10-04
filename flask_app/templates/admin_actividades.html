@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+{% block title %}Cursos · Administración{% endblock %}
+{% block descripcion %}Administración de cursos y capacitaciones.{% endblock %}
+
+{% block head_extra %}
+<style>
+  .adm__cab { display:flex; flex-wrap:wrap; gap:var(--sp-3); align-items:baseline;
+    justify-content:space-between; margin-bottom:var(--sp-5) }
+  .adm__resumen { color:var(--text-muted); font-size:.9rem }
+
+  .fila { display:grid; gap:var(--sp-3); padding:var(--sp-4);
+    border:var(--bw) solid var(--border); border-radius:var(--r-md);
+    background:var(--surface-card); margin-bottom:var(--sp-3) }
+  .fila--borrador { border-style:dashed }
+  .fila--off { opacity:.6 }
+  .fila__l1 { display:grid; gap:var(--sp-3); grid-template-columns:1fr }
+  .fila__l2 { display:grid; gap:var(--sp-3); grid-template-columns:1fr }
+  @media (min-width:900px) {
+    .fila__l1 { grid-template-columns:2fr 200px 200px }
+    .fila__l2 { grid-template-columns:1.4fr 90px 120px 150px }
+  }
+  .campo { display:flex; flex-direction:column; gap:4px }
+  .campo__et { font-size:.7rem; text-transform:uppercase; letter-spacing:.08em;
+    color:var(--text-muted); font-weight:var(--fw-semibold) }
+  .campo input, .campo select, .campo textarea {
+    font:inherit; font-size:.9rem; padding:9px 11px; border-radius:var(--r-sm);
+    border:var(--bw) solid var(--border-strong); background:var(--surface-page);
+    color:var(--text-body); width:100% }
+  .campo textarea { resize:vertical; min-height:52px }
+  .campo input:focus, .campo select:focus, .campo textarea:focus {
+    outline:2px solid var(--accent); outline-offset:1px }
+
+  .fila__pie { display:flex; flex-wrap:wrap; gap:var(--sp-3); align-items:center }
+  .cupos { font-size:.82rem; color:var(--text-muted); white-space:nowrap }
+  .cupos b { color:var(--lp-espresso) }
+  .cupos--lleno b { color:#A33A2E }
+
+  .marca-estado { display:inline-flex; align-items:center; gap:7px; font-size:.75rem;
+    font-weight:var(--fw-bold); padding:4px 11px; border-radius:var(--r-pill);
+    letter-spacing:.02em }
+  .marca-estado--borrador  { background:var(--surface-sand); color:var(--lp-coffee-500) }
+  .marca-estado--publicada { background:#E7F0E9; color:#1D4A31 }
+  .marca-estado--cancelada { background:#F5EAE8; color:#8E3226 }
+  .marca-estado--realizada { background:var(--lp-gold-bg); color:#9B0D23 }
+
+  .adm__nuevo { border:var(--bw) dashed var(--border-strong);
+    border-radius:var(--r-md); padding:var(--sp-5); background:var(--surface-sand);
+    margin-bottom:var(--sp-7) }
+  details.adm__nuevo > summary { cursor:pointer; font-weight:var(--fw-semibold); list-style:none }
+  details.adm__nuevo > summary::-webkit-details-marker { display:none }
+  .peligro { color:#A33A2E; background:none; border:none; cursor:pointer;
+    font:inherit; font-size:.82rem; text-decoration:underline; padding:0 }
+  .vacio { text-align:center; padding:var(--sp-7) var(--sp-4);
+    border:var(--bw) dashed var(--border-strong); border-radius:var(--r-md);
+    color:var(--text-muted) }
+</style>
+{% endblock %}
+
+{% block contenido %}
+<main class="section"><div class="container">
+
+  <div class="adm__cab">
+    <div>
+      <div class="auth__eyebrow">Administración</div>
+      <h1 style="margin:6px 0 0">Cursos y capacitaciones</h1>
+      <p class="adm__resumen" style="margin:6px 0 0">
+        {{ actividades|length }} en total ·
+        {{ actividades|selectattr('estado','equalto','publicada')|list|length }} publicada(s)
+        · las horas van en hora de Chile
+      </p>
+    </div>
+    <a class="btn btn--outline btn--sm" href="{{ url_for('actividades') }}">Ver la agenda pública</a>
+  </div>
+
+  {# ---------- Crear ---------- #}
+  <details class="adm__nuevo" {{ 'open' if not actividades }}>
+    <summary>+ Crear una actividad</summary>
+    <form method="POST" action="{{ url_for('admin_actividades_crear') }}" style="margin-top:var(--sp-4)">
+      <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+      <div class="fila__l1">
+        <div class="campo">
+          <label class="campo__et" for="n-nombre">Nombre</label>
+          <input id="n-nombre" name="nombre" maxlength="150" required
+                 placeholder="Capacitación en bioseguridad" />
+        </div>
+        <div class="campo">
+          <label class="campo__et" for="n-inicio">Empieza (hora de Chile)</label>
+          <input id="n-inicio" name="inicio_at" type="datetime-local" required />
+        </div>
+        <div class="campo">
+          <label class="campo__et" for="n-fin">Termina (opcional)</label>
+          <input id="n-fin" name="fin_at" type="datetime-local" />
+        </div>
+      </div>
+      <div class="fila__l2" style="margin-top:var(--sp-3)">
+        <div class="campo">
+          <label class="campo__et" for="n-lugar">Lugar</label>
+          <input id="n-lugar" name="lugar" maxlength="200" placeholder="En la tienda" />
+        </div>
+        <div class="campo">
+          <label class="campo__et" for="n-cupos">Cupos</label>
+          <input id="n-cupos" name="cupos" type="number" min="1" value="12" required />
+        </div>
+        <div class="campo">
+          <label class="campo__et" for="n-precio">Precio CLP</label>
+          <input id="n-precio" name="precio_clp" type="number" min="0" step="1000" value="0" />
+        </div>
+        <div class="campo">
+          <label class="campo__et" for="n-marca">Marca</label>
+          <select id="n-marca" name="marca_id">
+            <option value="">Las dos</option>
+            {% for m in marcas %}<option value="{{ m.id }}">{{ m.nombre }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="campo" style="margin-top:var(--sp-3)">
+        <label class="campo__et" for="n-afiche">URL del afiche</label>
+        {# Una URL, no un archivo subido: el afiche ya vive donde se diseñó
+           (Drive, Instagram, el CDN de Shopify) y pedir una subida obligaría
+           a guardar imágenes, miniaturas y espacio en disco para algo que ya
+           está en internet. Se muestra ENTERO, sin recortar: estos afiches
+           traen la fecha y la hora dentro. #}
+        <input id="n-afiche" name="imagen_url" type="text" inputmode="url" maxlength="500"
+               placeholder="https://... (opcional)" />
+      </div>
+
+      <div class="campo" style="margin-top:var(--sp-3)">
+        <label class="campo__et" for="n-form">Formulario de inscripción</label>
+        {# El Google Form donde la persona sube su comprobante. Va por
+           actividad porque cada taller tiene el suyo, con su fecha y su
+           precio adentro. Sin esto, quien tome un cupo no tiene dónde pagar. #}
+        <input id="n-form" name="formulario_url" type="text" inputmode="url" maxlength="500"
+               placeholder="https://docs.google.com/forms/... (opcional)" />
+      </div>
+
+      <div class="campo" style="margin-top:var(--sp-3)">
+        <label class="campo__et" for="n-desc">Descripción</label>
+        <textarea id="n-desc" name="descripcion" maxlength="4000" rows="3"></textarea>
+      </div>
+      <div style="display:flex;gap:var(--sp-3);align-items:flex-end;margin-top:var(--sp-4)">
+        <div class="campo" style="max-width:180px">
+          <label class="campo__et" for="n-estado">Estado</label>
+          <select id="n-estado" name="estado">
+            {% for e in estados %}
+            <option value="{{ e }}" {{ 'selected' if e == 'borrador' }}>{{ e|capitalize }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button class="btn btn--primary btn--sm" type="submit">Crear</button>
+      </div>
+      <p class="adm__resumen" style="margin:var(--sp-3) 0 0">
+        En <b>borrador</b> no la ve nadie. Publícala cuando esté lista.
+      </p>
+    </form>
+  </details>
+
+  {# ---------- Lista ---------- #}
+  {% for a in actividades %}
+  <form class="fila fila--{{ a.estado }} {{ 'fila--off' if a.ya_paso or a.estado in ('cancelada','realizada') }}"
+        method="POST" action="{{ url_for('admin_actividades_actualizar', actividad_id=a.id) }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+
+    <div class="fila__l1">
+      <div class="campo">
+        <label class="campo__et" for="nom-{{ a.id }}">Nombre</label>
+        <input id="nom-{{ a.id }}" name="nombre" value="{{ a.nombre }}" maxlength="150" required />
+      </div>
+      <div class="campo">
+        <label class="campo__et" for="ini-{{ a.id }}">Empieza (hora de Chile)</label>
+        <input id="ini-{{ a.id }}" name="inicio_at" type="datetime-local"
+               value="{{ a.inicio_form }}" required />
+      </div>
+      <div class="campo">
+        <label class="campo__et" for="fin-{{ a.id }}">Termina</label>
+        <input id="fin-{{ a.id }}" name="fin_at" type="datetime-local" value="{{ a.fin_form }}" />
+      </div>
+    </div>
+
+    <div class="fila__l2">
+      <div class="campo">
+        <label class="campo__et" for="lug-{{ a.id }}">Lugar</label>
+        <input id="lug-{{ a.id }}" name="lugar" value="{{ a.lugar or '' }}" maxlength="200" />
+      </div>
+      <div class="campo">
+        <label class="campo__et" for="cup-{{ a.id }}">Cupos</label>
+        <input id="cup-{{ a.id }}" name="cupos" type="number" min="{{ a.inscritos or 1 }}"
+               value="{{ a.cupos }}" required />
+      </div>
+      <div class="campo">
+        <label class="campo__et" for="pre-{{ a.id }}">Precio CLP</label>
+        <input id="pre-{{ a.id }}" name="precio_clp" type="number" min="0" step="1000"
+               value="{{ a.precio_clp }}" />
+      </div>
+      <div class="campo">
+        <label class="campo__et" for="mar-{{ a.id }}">Marca</label>
+        <select id="mar-{{ a.id }}" name="marca_id">
+          <option value="">Las dos</option>
+          {% for m in marcas %}
+          <option value="{{ m.id }}" {{ 'selected' if m.id == a.marca_id }}>{{ m.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="campo">
+      <label class="campo__et" for="afi-{{ a.id }}">URL del afiche</label>
+      <div style="display:flex;gap:var(--sp-3);align-items:center">
+        <input id="afi-{{ a.id }}" name="imagen_url" type="text" inputmode="url" maxlength="500"
+               value="{{ a.imagen_url or '' }}" placeholder="https://... (opcional)"
+               style="flex:1 1 auto" />
+        {# La miniatura es la comprobación de que la URL sirve: si no carga,
+           se ve acá mismo y no en el sitio publicado. #}
+        {% if a.imagen_url %}
+        <img src="{{ a.imagen_url }}" alt="" loading="lazy"
+             style="width:48px;aspect-ratio:3/4;object-fit:cover;border-radius:var(--r-sm);
+                    border:var(--bw) solid var(--border);flex:none" />
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="campo">
+      <label class="campo__et" for="form-{{ a.id }}">Formulario de inscripción</label>
+      <input id="form-{{ a.id }}" name="formulario_url" type="text" inputmode="url"
+             maxlength="500" value="{{ a.formulario_url or '' }}"
+             placeholder="https://docs.google.com/forms/... (opcional)" />
+      {% if a.formulario_url %}
+      <a href="{{ a.formulario_url }}" target="_blank" rel="noopener noreferrer"
+         style="font-size:.78rem;color:var(--text-muted)">Abrirlo →</a>
+      {% endif %}
+    </div>
+
+    <div class="campo">
+      <label class="campo__et" for="des-{{ a.id }}">Descripción</label>
+      <textarea id="des-{{ a.id }}" name="descripcion" maxlength="4000" rows="2">{{ a.descripcion or '' }}</textarea>
+    </div>
+
+    <div class="fila__pie">
+      <select name="estado" class="marca-estado marca-estado--{{ a.estado }}"
+              style="border:0;padding:6px 12px;font-family:inherit;cursor:pointer">
+        {% for e in estados %}
+        <option value="{{ e }}" {{ 'selected' if e == a.estado }}>{{ e|capitalize }}</option>
+        {% endfor %}
+      </select>
+
+      <span class="cupos {{ 'cupos--lleno' if a.agotada }}">
+        <b>{{ a.inscritos }}</b> de {{ a.cupos }} cupos
+      </span>
+
+      <a class="btn btn--outline btn--sm"
+         href="{{ url_for('admin_inscritos', actividad_id=a.id) }}">Ver inscritos</a>
+
+      <button class="btn btn--primary btn--sm" type="submit">Guardar</button>
+
+      <button class="peligro" type="submit" form="borrar-{{ a.id }}"
+              data-nombre="{{ a.nombre }}" data-inscritos="{{ a.inscritos }}"
+              data-cancelada="{{ '1' if a.estado == 'cancelada' }}">Eliminar</button>
+    </div>
+  </form>
+
+  {# Un form no puede ir dentro de otro #}
+  <form id="borrar-{{ a.id }}" method="POST" hidden
+        action="{{ url_for('admin_actividades_eliminar', actividad_id=a.id) }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+  </form>
+  {% else %}
+  <div class="vacio">
+    <p style="margin:0 0 var(--sp-2)"><b>Todavía no hay actividades.</b></p>
+    <p style="margin:0;font-size:.85rem">Crea la primera con «+ Crear una actividad», acá arriba.</p>
+  </div>
+  {% endfor %}
+
+</div></main>
+{% endblock %}
+
+{% block page_js %}
+<script>
+(function () {
+  'use strict';
+  document.querySelectorAll('.peligro').forEach(function (boton) {
+    boton.addEventListener('click', function (e) {
+      var n = parseInt(boton.dataset.inscritos, 10) || 0;
+      var nombre = '«' + boton.dataset.nombre + '»';
+      if (boton.dataset.cancelada) {
+        /* Cancelada: se puede borrar con todo lo suyo. */
+        if (!confirm('¿Eliminar ' + nombre + '?\n\nEstá cancelada, así que se borran también ' +
+                     'todas sus inscripciones y los vouchers dejan de funcionar. Si alguien ' +
+                     'ya pagó, revisa la devolución antes.\n\nEsto no se puede deshacer.')) {
+          e.preventDefault();
+        }
+        return;
+      }
+      if (n > 0) {
+        /* Viva y con gente: el servidor no la va a borrar. Se avisa acá en
+           vez de mandar el formulario para nada. */
+        e.preventDefault();
+        alert('En ' + nombre + ' hay ' + n + ' persona(s) inscrita(s).\n\n' +
+              'Para eliminarla, primero márcala como CANCELADA y toca Guardar ' +
+              '(así ellos lo ven al entrar). Después ya puedes eliminarla.');
+        return;
+      }
+      if (!confirm('¿Eliminar ' + nombre + '?\n\nEsto no se puede deshacer.')) e.preventDefault();
+    });
+  });
+}());
+</script>
+{% endblock %}

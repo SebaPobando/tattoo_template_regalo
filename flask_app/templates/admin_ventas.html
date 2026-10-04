@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% block title %}Ventas · {{ negocio.nombre }}{% endblock %}
+{% block descripcion %}Cómo van las ventas de la tienda online.{% endblock %}
+
+{% block head_extra %}
+<style>
+  /* Los graficos son SVG armado en el servidor: sin libreria, sin JS. El
+     color de las barras es var(--lp-forest-600), el verde de marca, elegido
+     por contraste sobre la tarjeta blanca (8.3:1, la marca pide 3:1). */
+  .vt { display: grid; gap: var(--sp-5); margin-top: var(--sp-6); }
+
+  .vt__tabs { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+  .vt__tab {
+    font-family: var(--font-body); font-weight: var(--fw-semibold); font-size: .875rem;
+    padding: 7px 16px; border-radius: var(--r-pill); text-decoration: none;
+    border: var(--bw-strong) solid var(--border-strong); color: var(--lp-coffee-600);
+    white-space: nowrap;
+  }
+  .vt__tab:hover { background: var(--surface-sand); }
+  .vt__tab:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
+  .vt__tab--activa { background: var(--lp-forest); color: var(--lp-cream-50); border-color: var(--lp-forest); }
+
+  /* Las tarjetas de numeros: mismo tamano y fuente que /admin/pedidos, para
+     que las dos paginas se lean como una sola. */
+  .vt__kpis { display: grid; gap: var(--sp-4); grid-template-columns: 1fr; }
+  @media (min-width: 620px) { .vt__kpis { grid-template-columns: repeat(3, 1fr); } }
+  .vt__kpi {
+    background: var(--surface-card); border: var(--bw) solid var(--border);
+    border-radius: var(--r-md); padding: var(--sp-5);
+  }
+  .vt__kpi-et { font-size: .78rem; color: var(--text-muted); display: block; }
+  .vt__kpi-num {
+    display: block; font-family: var(--font-display); font-size: 1.6rem;
+    color: var(--lp-espresso); margin-top: 2px;
+  }
+  .vt__delta { font-size: .8rem; font-weight: var(--fw-semibold); }
+  .vt__delta--sube { color: var(--lp-success); }
+  .vt__delta--baja { color: var(--lp-danger); }
+  .vt__delta--nada { color: var(--text-muted); font-weight: var(--fw-regular); }
+
+  .vt__caja {
+    background: var(--surface-card); border: var(--bw) solid var(--border);
+    border-radius: var(--r-md); padding: var(--sp-5);
+  }
+  .vt__tit { font-family: var(--font-display); font-size: 1rem; color: var(--lp-espresso); margin: 0; }
+  .vt__sub { font-size: .78rem; color: var(--text-muted); margin: 2px 0 var(--sp-4); }
+
+  .vt__svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .vt__barra { fill: var(--lp-forest-600); }
+  /* El periodo en curso va mas claro porque todavia no termina: comparar una
+     barra incompleta con meses cerrados es la trampa clasica de estos paneles. */
+  .vt__barra--curso { fill: var(--lp-forest-300); }
+  .vt__grid { stroke: var(--border); stroke-width: 1; }
+  .vt__eje {
+    font-family: var(--font-body); font-size: 10px; fill: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .vt__prod { display: grid; gap: var(--sp-3); }
+  .vt__prod-fila { display: grid; gap: 4px; }
+  .vt__prod-top { display: flex; justify-content: space-between; gap: var(--sp-3); font-size: .84rem; }
+  .vt__prod-nom { color: var(--text-strong); font-weight: var(--fw-semibold); overflow-wrap: anywhere; }
+  .vt__prod-val { color: var(--text-muted); white-space: nowrap; }
+  .vt__prod-pista { background: var(--surface-sand); border-radius: var(--r-pill); height: 8px; }
+  .vt__prod-relleno { background: var(--lp-forest-600); border-radius: var(--r-pill); height: 100%; }
+
+  .vt__tabla { width: 100%; border-collapse: collapse; font-size: .84rem; margin-top: var(--sp-3); }
+  .vt__tabla th, .vt__tabla td { text-align: left; padding: 6px 8px; border-bottom: var(--bw) solid var(--divider); }
+  .vt__tabla td + td, .vt__tabla th + th { text-align: right; font-variant-numeric: tabular-nums; }
+  .vt__ver { font-size: .8rem; color: var(--lp-coffee-600); cursor: pointer; margin-top: var(--sp-3); }
+  .vt__vacio { color: var(--text-muted); margin: 0; }
+</style>
+{% endblock %}
+
+{% block contenido %}
+<main class="section"><div class="container" style="max-width:860px">
+  <div class="auth__eyebrow">Administración</div>
+  <h1 style="margin:6px 0 0">Ventas</h1>
+  <p style="color:var(--text-muted);margin:var(--sp-2) 0 0;max-width:62ch">
+    Cómo va la tienda online. El detalle de cada pedido está en
+    <a href="{{ url_for('admin_pedidos') }}?periodo={{ periodo }}">Pedidos de la tienda</a>.
+    Lo reembolsado no suma en ningún número de esta página.
+  </p>
+
+  <div class="vt">
+
+    {# Un solo selector arriba: manda sobre todo lo que viene abajo. #}
+    {% set nombres = {'dia': 'Día', 'semana': 'Semana', 'mes': 'Mes', 'anio': 'Año'} %}
+    <nav class="vt__tabs" aria-label="Agrupar las ventas por período">
+      {% for clave in periodos %}
+      <a class="vt__tab{{ ' vt__tab--activa' if periodo == clave }}"
+         href="{{ url_for('admin_ventas') }}?periodo={{ clave }}"
+         {% if periodo == clave %}aria-current="page"{% endif %}>{{ nombres[clave] }}</a>
+      {% endfor %}
+    </nav>
+
+    {% if not hay_datos %}
+    <div class="vt__caja">
+      <p class="vt__vacio">
+        Todavía no hay ventas registradas en este período. Cuando llegue el
+        primer pedido de Shopify, acá vas a ver cómo evolucionan.
+      </p>
+    </div>
+    {% else %}
+
+    {#
+      Los tres numeros del periodo en curso. El delta compara contra el
+      periodo anterior completo; cuando el anterior fue cero no se muestra
+      porcentaje, porque un "+100%" sobre cero no significa nada.
+    #}
+    {% macro delta(valor) %}
+      {% if valor is none %}
+        <span class="vt__delta vt__delta--nada">sin comparación</span>
+      {% elif valor > 0 %}
+        <span class="vt__delta vt__delta--sube">▲ {{ valor }}% vs {{ previo.etiqueta | lower }}</span>
+      {% elif valor < 0 %}
+        <span class="vt__delta vt__delta--baja">▼ {{ valor | abs }}% vs {{ previo.etiqueta | lower }}</span>
+      {% else %}
+        <span class="vt__delta vt__delta--nada">igual que {{ previo.etiqueta | lower }}</span>
+      {% endif %}
+    {% endmacro %}
+
+    <div class="vt__kpis">
+      <div class="vt__kpi">
+        <span class="vt__kpi-et">Vendido · {{ actual.etiqueta | lower }}</span>
+        <span class="vt__kpi-num">${{ actual.clp | miles }}</span>
+        {{ delta(var_clp) }}
+      </div>
+      <div class="vt__kpi">
+        <span class="vt__kpi-et">Pedidos</span>
+        <span class="vt__kpi-num">{{ actual.pedidos }}</span>
+        {{ delta(var_pedidos) }}
+      </div>
+      <div class="vt__kpi">
+        <span class="vt__kpi-et">Ticket promedio</span>
+        <span class="vt__kpi-num">${{ ticket | miles }}</span>
+        {{ delta(var_ticket) }}
+      </div>
+    </div>
+
+    <div class="vt__caja">
+      <h2 class="vt__tit">Ventas en el tiempo</h2>
+      <p class="vt__sub">
+        Últimos {{ serie | length }} {{ nombres[periodo] | lower }}s. La última barra
+        va más clara porque ese período todavía no termina.
+      </p>
+
+      {#
+        viewBox con aire abajo para las etiquetas del eje: si el alto fuera
+        solo el del area de barras, las fechas quedarian cortadas.
+      #}
+      <svg class="vt__svg" viewBox="-46 -8 {{ grafico.ancho + 56 }} {{ grafico.alto + 40 }}"
+           role="img" aria-label="Ventas por {{ nombres[periodo] | lower }}">
+        {% for m in grafico.marcas %}
+        <line class="vt__grid" x1="0" y1="{{ m.y }}" x2="{{ grafico.ancho }}" y2="{{ m.y }}" />
+        <text class="vt__eje" x="-8" y="{{ m.y + 3 }}" text-anchor="end">${{ m.valor | miles }}</text>
+        {% endfor %}
+
+        {% for b in grafico.barras %}
+          {% if b.alto > 0 %}
+          {# Punta redondeada arriba, pie cuadrado en la base. #}
+          {% set r = 4 if b.alto >= 4 else b.alto %}
+          <path class="vt__barra{{ ' vt__barra--curso' if b.en_curso }}"
+                d="M{{ b.x }},{{ grafico.alto }}
+                   V{{ b.y + r }}
+                   Q{{ b.x }},{{ b.y }} {{ b.x + r }},{{ b.y }}
+                   H{{ b.x + b.ancho - r }}
+                   Q{{ b.x + b.ancho }},{{ b.y }} {{ b.x + b.ancho }},{{ b.y + r }}
+                   V{{ grafico.alto }} Z">
+            <title>{{ b.etiqueta }}: ${{ b.clp | miles }} · {{ b.pedidos }} pedido{{ 's' if b.pedidos != 1 }}</title>
+          </path>
+          {% endif %}
+          <text class="vt__eje" x="{{ b.centro }}" y="{{ grafico.alto + 16 }}"
+                text-anchor="middle">{{ b.corta }}</text>
+        {% endfor %}
+
+        <line class="vt__grid" x1="0" y1="{{ grafico.alto }}" x2="{{ grafico.ancho }}" y2="{{ grafico.alto }}" />
+      </svg>
+
+      {# El grafico nunca es la unica forma de leer un valor. #}
+      <details>
+        <summary class="vt__ver">Ver los números</summary>
+        <table class="vt__tabla">
+          <thead><tr><th>Período</th><th>Pedidos</th><th>Vendido</th></tr></thead>
+          <tbody>
+            {% for d in serie | reverse %}
+            <tr><td>{{ d.etiqueta }}</td><td>{{ d.pedidos }}</td><td>${{ d.clp | miles }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </details>
+    </div>
+
+    <div class="vt__caja">
+      <h2 class="vt__tit">Productos más vendidos</h2>
+      <p class="vt__sub">Por unidades, en los últimos {{ serie | length }} {{ nombres[periodo] | lower }}s.</p>
+
+      {% if productos %}
+      <div class="vt__prod">
+        {% for p in productos %}
+        <div class="vt__prod-fila">
+          <div class="vt__prod-top">
+            <span class="vt__prod-nom">{{ p.titulo }}</span>
+            <span class="vt__prod-val">{{ p.unidades }} u · ${{ p.clp | miles }}</span>
+          </div>
+          <div class="vt__prod-pista">
+            <div class="vt__prod-relleno" style="width:{{ p.fraccion }}%"></div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="vt__vacio">Sin ítems registrados en este período.</p>
+      {% endif %}
+    </div>
+
+    {% endif %}
+  </div>
+</div></main>
+{% endblock %}

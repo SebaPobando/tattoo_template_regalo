@@ -1,0 +1,16 @@
+{#
+  Los colores de la temporada (Halloween...), encima de los de siempre.
+  Va al FINAL del <head>, después de toda otra hoja y de _marca.html,
+  porque en CSS gana la última definición. Fuera de temporada no pinta
+  nada, y en el panel de admin tampoco. Ver config/temporadas.py.
+#}
+{% set t = temporada() %}
+{% if t and t.colores and not request.path.startswith('/admin') %}
+<style id="temporada-{{ t.nombre }}">
+  :root {
+  {%- for variable, valor in t.colores.items() %}
+    {{ variable }}: {{ valor }};
+  {%- endfor %}
+  }
+</style>
+{% endif %}

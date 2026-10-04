@@ -1,0 +1,114 @@
+{#
+  _promo.html — el banner de promoción de la portada
+
+  Va ANTES del <header> y en flujo normal, no fijo. En la landing el header es
+  `position: sticky`, así que el banner lo empuja hacia abajo sin taparlo y sin
+  pelear con ningún z-index: al hacer scroll el banner se va y el header queda
+  pegado arriba, como siempre. Un banner fijo habría obligado a calcular su
+  altura por JS y a sumarla al header en cada resize.
+
+  Mientras la promo esté vigente, el banner sale SIEMPRE al entrar a la
+  portada, con cuenta o sin ella (decisión de Seba, 2026-10-02). Cerrarlo lo
+  esconde solo durante esa visita: no se guarda nada en el navegador. Antes
+  se recordaba por promo, y quien lo cerraba una vez no lo volvía a ver más
+  — ni el mismo admin, que creía que la promo no estaba saliendo.
+
+  Nace `hidden` y lo abre el script inline de abajo, igual que antes: sin
+  JavaScript el contador no corre y la X no cierra, así que mejor no pintarlo.
+
+  El contador cambia cada segundo, así que va `aria-hidden`: un lector de
+  pantalla anunciando los segundos es insoportable. El plazo viaja en texto
+  normal dentro de la bajada, que es lo que sí se lee.
+#}
+{% if promo %}
+<section class="promo" id="lpPromo" hidden
+         data-promo="{{ promo.clave or promo.id }}"
+         {% if promo.fin_at %}data-segundos="{{ promo.segundos }}"{% endif %}
+         role="region" aria-label="Promoción vigente">
+  <div class="promo__interior">
+    {# La ilustracion se apaga entera con MARCA_MASCOTAS=no, igual que en el
+       resto del sitio: hay negocios que no quieren mascota ninguna. #}
+    {% if negocio.mascotas %}
+    <img class="promo__mascota"
+         src="{{ mascota('sirviendo.png', 'promo') }}"
+         alt="" aria-hidden="true" />
+    {% endif %}
+
+    <div class="promo__texto">
+      <span class="promo__etiqueta">Promoción</span>
+      <p class="promo__titulo">{{ promo.nombre }}</p>
+      <p class="promo__bajada">
+        {% if promo.bajada %}{{ promo.bajada }} {% endif %}
+        {% if promo.fin_at %}
+        <span data-promo-plazo>Termina el {{ tiempo.largo(promo.fin_at) }}.</span>
+        {% endif %}
+      </p>
+    </div>
+
+    {# Sin fecha de término no hay nada que contar: el combo corre
+       hasta que lo apaguen, así que el reloj no se pinta. #}
+    {% if promo.fin_at %}
+    <div class="promo__reloj" data-promo-reloj aria-hidden="true">
+      <span class="promo__caja" data-promo-dias hidden>
+        <b class="promo__num" data-promo-dd>00</b><i class="promo__rot">días</i>
+      </span>
+      <span class="promo__caja">
+        <b class="promo__num" data-promo-hh>00</b><i class="promo__rot">hrs</i>
+      </span>
+      <span class="promo__caja">
+        <b class="promo__num" data-promo-mm>00</b><i class="promo__rot">min</i>
+      </span>
+      <span class="promo__caja">
+        <b class="promo__num" data-promo-ss>00</b><i class="promo__rot">seg</i>
+      </span>
+    </div>
+    {% endif %}
+
+    {% if promo.boton_texto and promo.boton_destino %}
+    <a class="promo__cta" href="{{ promo.boton_destino }}">{{ promo.boton_texto }}</a>
+    {% endif %}
+  </div>
+
+  <button class="promo__cerrar" type="button" data-promo-cerrar aria-label="Cerrar la promoción">
+    <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor"
+         stroke-width="2.3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+  </button>
+</section>
+
+{# La burbuja es la promo en reposo: sigue disponible sin estorbar. Aparece al
+   cerrar el banner y también cuando el banner se pierde de vista por scroll.
+   Nada de esto se recuerda: en la próxima visita vuelve el banner. #}
+<div class="promo-burbuja" id="lpPromoBurbuja" hidden>
+  {% if negocio.mascotas %}
+  <img class="promo-burbuja__mascota"
+       src="{{ mascota('mano.png', 'promo-burbuja') }}"
+       alt="" aria-hidden="true" />
+  {% endif %}
+  {# El globo y el aspa van hermanos dentro de esta caja, y no el aspa dentro
+     del globo: un <button> dentro de otro <button> es HTML invalido. Misma
+     trampa que el <button> dentro de <a> de las tarjetas de la tienda. #}
+  <div class="promo-burbuja__caja">
+    <button class="promo-burbuja__globo" type="button" data-promo-abrir>
+      <span class="promo-burbuja__etiqueta">Promoción</span>
+      <span class="promo-burbuja__titulo">{{ promo.nombre }}</span>
+      <span class="promo-burbuja__reloj" data-promo-mini aria-hidden="true">--:--:--</span>
+    </button>
+    <button class="promo-burbuja__descartar" type="button" data-promo-descartar
+            aria-label="Esconder la promoción">
+      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor"
+           stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var banner = document.getElementById('lpPromo');
+  if (!banner) { return; }
+  /* Limpieza de la versión anterior, que recordaba qué promo se cerró. */
+  try { window.localStorage.removeItem('promo_v1'); } catch (e) { /* storage bloqueado */ }
+  banner.hidden = false;
+})();
+</script>
+{% endif %}

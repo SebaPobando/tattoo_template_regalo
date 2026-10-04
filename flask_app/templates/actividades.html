@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Cursos y capacitaciones · {{ negocio.nombre }}{% endblock %}
+{% block descripcion %}Cursos y capacitaciones para tatuadores en {{ negocio.nombre }}, {{ negocio.ciudad }}.{% endblock %}
+
+{% block head_extra %}
+<!-- Los estilos de .agenda / .evento / .pastilla se movieron a agenda.css
+     porque la seccion #talleres de la landing usa exactamente los mismos. -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/agenda.css') }}" />
+{% endblock %}
+
+{% block contenido %}
+<main class="section"><div class="container">
+  <div class="auth__eyebrow">Agenda</div>
+  <h1 style="margin:6px 0 var(--sp-2)">Cursos y capacitaciones</h1>
+  <p style="color:var(--text-muted);max-width:56ch;margin:0 0 var(--sp-6)">
+    Cupos limitados. Puedes inscribirte con o sin cuenta.
+  </p>
+
+  {% if actividades %}
+  <div class="agenda">
+    {% for a in actividades %}
+    <a class="evento" href="{{ url_for('actividad', slug=a.slug) }}">
+      {% if a.imagen_url %}
+      <img class="evento__afiche" src="{{ a.imagen_url }}" alt="Afiche de {{ a.nombre }}" loading="lazy" onerror="this.hidden=true" />
+      {% endif %}
+      <div class="evento__contenido">
+        <div class="evento__fecha">
+          <div class="evento__dia">{{ a.dia }}</div>
+          <div class="evento__mes">{{ a.mes }}</div>
+        </div>
+        <div class="evento__cuerpo">
+          <h2 class="evento__nombre">{{ a.nombre }}</h2>
+          <p class="evento__dato">{{ a.cuando }}</p>
+          {% if a.lugar %}<p class="evento__dato">{{ a.lugar }}</p>{% endif %}
+          <div class="evento__pie">
+            <span class="pastilla pastilla--precio">{{ a.precio_fmt }}</span>
+            {% if a.agotada %}
+              <span class="pastilla pastilla--agotada">Sin cupos</span>
+            {% elif a.libres <= 3 %}
+              <span class="pastilla pastilla--pocos">
+                Quedan {{ a.libres }} cupo{{ 's' if a.libres != 1 }}
+              </span>
+            {% else %}
+              <span class="pastilla pastilla--libre">{{ a.libres }} cupos</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="sin-nada">
+    {% if negocio.mascotas %}<img src="{{ mascota('en-construccion.png') }}" alt="" aria-hidden="true" />{% endif %}
+    <p style="margin:0 0 var(--sp-2)"><b>Todavía no hay actividades publicadas.</b></p>
+    <p style="margin:0;font-size:.88rem">
+      Estamos preparando los próximos cursos. Vuelve pronto.
+    </p>
+  </div>
+  {% endif %}
+</div></main>
+{% endblock %}

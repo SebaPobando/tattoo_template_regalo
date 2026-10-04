@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% block title %}Administración · {{ negocio.nombre }}{% endblock %}
+{% block descripcion %}Panel de administración.{% endblock %}
+
+{% block head_extra %}
+<style>
+  .panel { display: grid; gap: var(--sp-4); margin-top: var(--sp-6); }
+  @media (min-width: 760px) { .panel { grid-template-columns: repeat(2, 1fr); } }
+  .panel__card {
+    display: block; padding: var(--sp-5) var(--sp-6); text-decoration: none;
+    background: var(--surface-card); border: var(--bw) solid var(--border);
+    border-radius: var(--r-md); color: inherit;
+    transition: border-color var(--dur) var(--ease), transform var(--dur) var(--ease);
+  }
+  .panel__card:hover { border-color: var(--lp-forest); transform: translateY(-2px); }
+  .panel__tit { font-family: var(--font-display); font-size: 1.3rem;
+    color: var(--lp-espresso); margin: 0 0 6px; }
+  .panel__desc { color: var(--text-muted); font-size: .88rem; margin: 0; line-height: 1.6; }
+  .panel__dato { display: inline-block; margin-top: var(--sp-3); font-size: .78rem;
+    font-weight: var(--fw-bold); color: #9B0D23; background: var(--lp-gold-bg);
+    padding: 4px 11px; border-radius: var(--r-pill); }
+</style>
+{% endblock %}
+
+{% block contenido %}
+<main class="section"><div class="container" style="max-width:860px">
+  <div class="auth__eyebrow">{{ 'Administración' if es_admin else 'Personal' }}</div>
+  <h1 style="margin:6px 0 0">{{ 'Panel' if es_admin else 'Mesón' }}</h1>
+  <p style="color:var(--text-muted);margin:var(--sp-2) 0 0">
+    {{ 'Solo tú ves esto.' if es_admin else 'Lo que se usa en el mesón.' }} Para el resto, estas páginas no existen.
+  </p>
+
+  {# Todo lo de admin cuelga de acá y no del menú de arriba: cada enlace nuevo
+     en la barra la empujaba a partirse en dos líneas. Así la barra queda fija
+     y este panel crece lo que haga falta. #}
+  <div class="panel">
+    {# Primera porque es la única que se usa con alguien esperando. #}
+    {% if barra %}
+    <a class="panel__card" href="{{ url_for('admin_barra') }}">
+      <h2 class="panel__tit">Pedidos para retiro</h2>
+      <p class="panel__desc">
+        La cola del día por franja horaria, y cuándo, cuánto y qué se puede
+        pedir para pasar a buscar.
+      </p>
+      {% if not barra.activo %}
+      <span class="panel__dato">Cerrados · ábrelos desde acá</span>
+      {% elif barra.nuevos %}
+      <span class="panel__dato">{{ barra.nuevos }} nuevo{{ 's' if barra.nuevos != 1 }} sin tomar</span>
+      {% else %}
+      <span class="panel__dato">{{ barra.vivos }} en curso hoy</span>
+      {% endif %}
+    </a>
+    {% endif %}
+
+    {% if vales %}
+    <a class="panel__card" href="{{ url_for('admin_vales') }}">
+      <h2 class="panel__tit">Vales</h2>
+      <p class="panel__desc">
+        Emitir vales de regalo y gift cards, enviarlos por WhatsApp e
+        imprimir los de un evento. Se canjean escaneando su QR.
+      </p>
+      <span class="panel__dato">{{ vales.vigentes }} vigente{{ 's' if vales.vigentes != 1 }}</span>
+    </a>
+    {% endif %}
+
+    {% if ruleta %}
+    <a class="panel__card" href="{{ url_for('admin_ruleta') }}">
+      <h2 class="panel__tit">Ruleta</h2>
+      <p class="panel__desc">
+        Habilitar un giro para quien compró sobre el monto, los premios de
+        cada gajo y quién ganó qué.
+      </p>
+      {% if not ruleta.gajos %}
+      <span class="panel__dato">Sin premios todavía</span>
+      {% elif ruleta.por_entregar %}
+      <span class="panel__dato">{{ ruleta.por_entregar }} premio{{ 's' if ruleta.por_entregar != 1 }} sin marcar entregado</span>
+      {% else %}
+      <span class="panel__dato">{{ ruleta.gajos }} gajos</span>
+      {% endif %}
+    </a>
+    {% endif %}
+
+    {# Lo que sigue es solo para el admin: el barista ve la barra y nada más. #}
+    {% if es_admin %}
+    <a class="panel__card" href="{{ url_for('admin_carta_inicio') }}">
+      <h2 class="panel__tit">Catálogo</h2>
+      <p class="panel__desc">
+        Precios, descripciones, disponibilidad y categorías de {{ negocio.nombre_corto }}
+        y {{ negocio.segunda.nombre }}.
+      </p>
+      <span class="panel__dato">{{ productos }} productos</span>
+    </a>
+
+    <a class="panel__card" href="{{ url_for('admin_actividades') }}">
+      <h2 class="panel__tit">Cursos</h2>
+      <p class="panel__desc">
+        Cursos y capacitaciones: crearlos, publicarlos, cupos y quién se inscribió.
+      </p>
+      <span class="panel__dato">
+        {{ publicadas }} publicada{{ 's' if publicadas != 1 }}
+      </span>
+    </a>
+
+    <a class="panel__card" href="{{ url_for('admin_muro') }}">
+      <h2 class="panel__tit">Muro de la comunidad</h2>
+      <p class="panel__desc">
+        Lo que la gente deja escrito en la portada. Nada se publica hasta que
+        lo apruebas acá.
+      </p>
+      {# El dato que importa es lo que está esperando: es lo único que pide
+         que hagas algo. Cuando no hay nada pendiente se muestra el total,
+         para que la pastilla no quede diciendo "0" como si algo fallara. #}
+      {% if muro.pendiente %}
+      <span class="panel__dato">
+        {{ muro.pendiente }} esperando revisión
+      </span>
+      {% else %}
+      <span class="panel__dato">
+        {{ muro.aprobado }} publicado{{ 's' if muro.aprobado != 1 }}
+      </span>
+      {% endif %}
+    </a>
+
+    <a class="panel__card" href="{{ url_for('admin_promos') }}">
+      <h2 class="panel__tit">Promos</h2>
+      <p class="panel__desc">
+        El banner de la portada, con su plazo. Se muestra una sola a la vez y
+        se retira solo cuando se cumple el tiempo.
+      </p>
+      {# Lo vigente primero: es lo que la gente está viendo ahora mismo en la
+         portada, y es el dato que hace falta antes de cargar otra. #}
+      {% if promos.vigentes %}
+      <span class="panel__dato">
+        {{ promos.vigentes }} en la portada
+      </span>
+      {% else %}
+      <span class="panel__dato">
+        {{ promos.total }} cargada{{ 's' if promos.total != 1 }}
+      </span>
+      {% endif %}
+    </a>
+
+    {# Lo de Shopify (destacados, pedidos pagados, ventas) solo aparece si
+       la tienda vende con Shopify. Sin eso son pantallas vacías. #}
+    {% if negocio.tienda_url and destacados is not none %}
+    <a class="panel__card" href="{{ url_for('admin_tienda') }}">
+      <h2 class="panel__tit">Tienda: destacados</h2>
+      <p class="panel__desc">
+        Qué productos de Shopify resaltar: un borde de color, una cinta como
+        «Nuevo», primeros en la tienda y en la pastilla «Especiales».
+      </p>
+      <span class="panel__dato">{{ destacados }} destacado{{ 's' if destacados != 1 }}</span>
+    </a>
+    {% endif %}
+
+    {% if negocio.tienda_url %}
+    <a class="panel__card" href="{{ url_for('admin_pedidos') }}">
+      <h2 class="panel__tit">Pedidos de la tienda</h2>
+      <p class="panel__desc">
+        Lo que Shopify confirma como pagado. Un registro, no una billetera:
+        todavía no suma saldo de puntos.
+      </p>
+      <span class="panel__dato">
+        {{ pedidos.total }} pedido{{ 's' if pedidos.total != 1 }}{% if pedidos.total %} · ${{ pedidos.total_clp | miles }}{% endif %}
+      </span>
+    </a>
+    {% endif %}
+
+    <a class="panel__card" href="{{ url_for('admin_combos', marca_slug=negocio.slug) }}">
+      <h2 class="panel__tit">Packs del catálogo</h2>
+      <p class="panel__desc">
+        Las promos: varios productos a un precio, con fecha de inicio y de
+        término. Pueden anunciarse en el banner de la portada.
+      </p>
+      <span class="panel__dato">Los productos siguen en su categoría</span>
+    </a>
+
+    {% if negocio.tienda_url %}
+    <a class="panel__card" href="{{ url_for('admin_ventas') }}">
+      <h2 class="panel__tit">Ventas</h2>
+      <p class="panel__desc">
+        Cómo va la tienda: evolución por día, semana, mes o año, productos
+        más vendidos y ticket promedio.
+      </p>
+      <span class="panel__dato">Gráficos y comparación con el período anterior</span>
+    </a>
+    {% endif %}
+
+    <a class="panel__card" href="{{ url_for('admin_usuarios') }}">
+      <h2 class="panel__tit">Cuentas</h2>
+      <p class="panel__desc">
+        Quién se ha registrado, y bloquear o devolver el acceso a alguien.
+      </p>
+      {# Lo bloqueado va primero porque es lo excepcional: si hay una cuenta
+         bloqueada conviene verlo de reojo sin entrar. #}
+      {% if usuarios.bloqueado %}
+      <span class="panel__dato">
+        {{ usuarios.bloqueado }} bloqueada{{ 's' if usuarios.bloqueado != 1 }}
+      </span>
+      {% else %}
+      <span class="panel__dato">
+        {{ usuarios.total }} cuenta{{ 's' if usuarios.total != 1 }}
+      </span>
+      {% endif %}
+    </a>
+    {% endif %}
+  </div>
+</div></main>
+{% endblock %}

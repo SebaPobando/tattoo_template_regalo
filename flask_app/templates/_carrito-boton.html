@@ -1,0 +1,18 @@
+{#
+  _carrito-boton.html — el boton del carrito del header, con su contador.
+
+  El drawer NO va aca: carrito.js lo inyecta solo. Esto es unicamente el
+  disparador, que tiene que vivir dentro del header de cada pagina.
+
+  Quien lo incluya necesita cargar css/carrito.css y js/carrito.js.
+#}
+{# Sin tienda Shopify no hay carrito: el pedido se arma en /pedir. #}
+{% if negocio.tienda_url %}
+<button class="cart-toggle" type="button" data-lp-carrito-abrir aria-label="Carrito vacío">
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.6L21 8H6"/>
+    <circle cx="10" cy="20" r="1.4"/><circle cx="17.5" cy="20" r="1.4"/>
+  </svg>
+  <span class="cart-toggle__badge" data-lp-carrito-conteo hidden>0</span>
+</button>
+{% endif %}

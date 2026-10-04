@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+{% block title %}Vales · {{ negocio.nombre }}{% endblock %}
+{% block descripcion %}Vales de regalo y gift cards.{% endblock %}
+
+{% block head_extra %}
+<style>
+  .vales { max-width: 900px; }
+  .caja { background: var(--surface-card); border: var(--bw) solid var(--border);
+    border-radius: var(--r-md); padding: var(--sp-5); margin-top: var(--sp-5); scroll-margin-top: 90px; }
+  .caja__tit { font-family: var(--font-display); font-size: 1.25rem; color: var(--lp-espresso); margin: 0 0 var(--sp-2); }
+  .caja__txt { color: var(--text-muted); font-size: .9rem; margin: 0 0 var(--sp-4); line-height: 1.55; }
+
+  .resumen { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-3); margin-top: var(--sp-5); }
+  @media (min-width: 640px) { .resumen { grid-template-columns: repeat(4, 1fr); } }
+  .resumen__dato { background: var(--surface-card); border: var(--bw) solid var(--border);
+    border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); }
+  .resumen__num { display: block; font-size: 1.35rem; font-weight: var(--fw-bold); color: var(--lp-espresso); }
+  .resumen__et { font-size: .74rem; color: var(--text-muted); }
+
+  /* El selector de tipo: dos botones grandes, porque es lo primero que se
+     decide y cambia qué más se pregunta. */
+  .tipos { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); margin-bottom: var(--sp-4); border: 0; padding: 0; }
+  .tipo { position: relative; }
+  .tipo input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+  .tipo__caja { display: block; padding: var(--sp-3) var(--sp-4); border: var(--bw-strong) solid var(--border-strong);
+    border-radius: var(--r-md); text-align: center; }
+  .tipo__nombre { display: block; font-weight: var(--fw-bold); color: var(--lp-espresso); }
+  .tipo__desc { display: block; font-size: .75rem; color: var(--text-muted); margin-top: 2px; }
+  .tipo input:checked + .tipo__caja { border-color: var(--lp-forest); background: var(--lp-forest); }
+  .tipo input:checked + .tipo__caja .tipo__nombre,
+  .tipo input:checked + .tipo__caja .tipo__desc { color: var(--lp-cream-50); }
+  .tipo input:focus-visible + .tipo__caja { box-shadow: var(--shadow-focus); }
+
+  .grid2 { display: grid; gap: 0 var(--sp-4); }
+  @media (min-width: 640px) { .grid2 { grid-template-columns: 1fr 1fr; } }
+  .solo[hidden] { display: none; }
+  .js .solo-sinjs { display: none; }
+
+  details.caja > summary { cursor: pointer; font-family: var(--font-display); font-size: 1.25rem; color: var(--lp-espresso); }
+  details.caja[open] > summary { margin-bottom: var(--sp-3); }
+
+  /* --- La lista ------------------------------------------------------- */
+  .filtros { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: flex-end; margin-bottom: var(--sp-3); }
+  .filtros .field { margin: 0; flex: 1 1 140px; }
+  .filtros .field__input { padding: 10px 12px; }
+  .vale { display: flex; flex-wrap: wrap; gap: 4px var(--sp-3); justify-content: space-between; align-items: center;
+    padding: var(--sp-3) 0; border-bottom: var(--bw) solid var(--divider); text-decoration: none; color: inherit; }
+  .vale:last-child { border-bottom: 0; }
+  .vale:hover .vale__que { text-decoration: underline; }
+  .vale__info { min-width: 0; flex: 1 1 260px; }
+  .vale__que { font-weight: var(--fw-bold); color: var(--lp-espresso); overflow-wrap: anywhere; }
+  .vale__meta { font-size: .78rem; color: var(--text-muted); overflow-wrap: anywhere; }
+  .etqs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .etq { display: inline-block; font-size: .66rem; font-weight: var(--fw-bold); text-transform: uppercase;
+    letter-spacing: .04em; padding: 3px 9px; border-radius: var(--r-pill); background: var(--surface-sand); color: var(--lp-coffee-600); }
+  .etq--giftcard { background: #E3ECF7; color: #22406B; }
+  .etq--regalo { background: var(--lp-gold-bg); color: #9B0D23; }
+  .etq--vigente { background: #E7F0E9; color: #1D4A31; }
+  .etq--vencido, .etq--anulado { background: #FBEAE7; color: #8A2E22; }
+  .vacio { color: var(--text-muted); text-align: center; padding: var(--sp-5) 0; margin: 0; }
+</style>
+{% endblock %}
+
+{% block contenido %}
+<main class="section"><div class="container vales">
+  <div class="auth__eyebrow">{{ 'Administración' if es_admin else 'Mesón' }}</div>
+  <h1 style="margin:6px 0 0">Vales</h1>
+  <p style="color:var(--text-muted);margin:var(--sp-2) 0 0;max-width:62ch">
+    Vales de regalo y gift cards. Cada uno tiene un QR que se canjea una sola
+    vez: lo escanea alguien del local con su sesión iniciada y toca «Canjear».
+  </p>
+
+  <div class="resumen">
+    <div class="resumen__dato"><span class="resumen__num">{{ resumen.vigentes }}</span><span class="resumen__et">vigentes</span></div>
+    <div class="resumen__dato"><span class="resumen__num">{{ resumen.canjeados }}</span><span class="resumen__et">canjeados</span></div>
+    {% if es_admin %}
+    <div class="resumen__dato"><span class="resumen__num">${{ resumen.vendido_clp | miles }}</span><span class="resumen__et">vendido en {{ resumen.giftcards }} gift card{{ 's' if resumen.giftcards != 1 }}</span></div>
+    <div class="resumen__dato"><span class="resumen__num">${{ resumen.por_canjear_clp | miles }}</span><span class="resumen__et">en gift cards sin canjear</span></div>
+    {% endif %}
+  </div>
+
+  <section class="caja" id="emitir">
+    <h2 class="caja__tit">Emitir un vale</h2>
+    <form method="POST" action="{{ url_for('admin_vales_emitir') }}" id="formEmitir">
+      <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+      <fieldset class="tipos">
+        <legend class="field__label" style="margin-bottom:var(--sp-2)">¿Qué es?</legend>
+        <label class="tipo">
+          <input type="radio" name="tipo" value="regalo" checked />
+          <span class="tipo__caja"><span class="tipo__nombre">Vale de regalo</span><span class="tipo__desc">Lo da el local. Puede vencer.</span></span>
+        </label>
+        <label class="tipo">
+          <input type="radio" name="tipo" value="giftcard" />
+          <span class="tipo__caja"><span class="tipo__nombre">Gift card</span><span class="tipo__desc">La compra un cliente. No vence.</span></span>
+        </label>
+      </fieldset>
+
+      <div class="field">
+        <label class="field__label" for="valido_por">Vale por</label>
+        <input class="field__input" id="valido_por" name="valido_por" maxlength="160" required
+               placeholder="1 caja de cartuchos · 1 tinta de 120 ml · $20.000 en compras" />
+        <span class="field__hint">Lo que se entrega al canjearlo. Se canjea completo, de una vez.</span>
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label class="field__label" for="para_nombre">Para (opcional)</label>
+          <input class="field__input" id="para_nombre" name="para_nombre" maxlength="80" placeholder="Nombre de quien lo recibe" />
+        </div>
+        <div class="field">
+          <label class="field__label" for="para_telefono">Su celular (opcional)</label>
+          <input class="field__input" id="para_telefono" name="para_telefono" type="tel" inputmode="tel" placeholder="9 1234 5678" />
+          <span class="field__hint">Para mandárselo por WhatsApp con un toque.</span>
+        </div>
+      </div>
+
+      <div class="grid2 solo" data-solo="regalo">
+        <div class="field">
+          <label class="field__label" for="motivo">Motivo (opcional)</label>
+          <input class="field__input" id="motivo" name="motivo" maxlength="120" placeholder="Evento, cortesía, sorteo…" />
+        </div>
+        <div class="field">
+          <label class="field__label" for="vence">Vence el (opcional)</label>
+          <input class="field__input" id="vence" name="vence" type="date" min="{{ hoy }}" />
+          <span class="field__hint">Vale hasta el final de ese día. Vacío = no vence.<span class="solo-sinjs"> Solo para vales de regalo.</span></span>
+        </div>
+      </div>
+
+      <div class="grid2 solo" data-solo="giftcard">
+        <div class="field">
+          <label class="field__label" for="comprador">La compró (opcional)</label>
+          <input class="field__input" id="comprador" name="comprador" maxlength="80" placeholder="Nombre de quien pagó" />
+        </div>
+        <div class="field">
+          <label class="field__label" for="monto">Cuánto pagó ($)</label>
+          <input class="field__input" id="monto" name="monto_pagado_clp" type="number" min="1" step="1" inputmode="numeric" placeholder="10000" />
+          <span class="field__hint solo-sinjs">Obligatorio para gift cards.</span>
+        </div>
+      </div>
+
+      <button class="btn btn--primary" type="submit">Emitir</button>
+    </form>
+  </section>
+
+  <details class="caja" id="evento">
+    <summary>Emitir varios para un evento</summary>
+    <p class="caja__txt">Vales de regalo iguales, cada uno con su QR. Se abre una hoja lista para imprimir y recortar.</p>
+    <form method="POST" action="{{ url_for('admin_vales_lote') }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+      <div class="grid2">
+        <div class="field">
+          <label class="field__label" for="lote_nombre">Evento</label>
+          <input class="field__input" id="lote_nombre" name="nombre" maxlength="120" required placeholder="Aniversario 2026" />
+        </div>
+        <div class="field">
+          <label class="field__label" for="lote_cantidad">Cuántos</label>
+          <input class="field__input" id="lote_cantidad" name="cantidad" type="number" min="1" max="{{ max_lote }}" step="1" value="20" required />
+        </div>
+      </div>
+      <div class="field">
+        <label class="field__label" for="lote_valido">Cada vale por</label>
+        <input class="field__input" id="lote_valido" name="valido_por" maxlength="160" required placeholder="1 caja de guantes" />
+      </div>
+      <div class="field" style="max-width:280px">
+        <label class="field__label" for="lote_vence">Vencen el (opcional)</label>
+        <input class="field__input" id="lote_vence" name="vence" type="date" min="{{ hoy }}" />
+      </div>
+      <button class="btn btn--primary" type="submit">Emitir e imprimir</button>
+    </form>
+  </details>
+
+  <section class="caja" id="lista">
+    <h2 class="caja__tit">Todos los vales</h2>
+    <form class="filtros" method="GET" action="{{ url_for('admin_vales') }}#lista">
+      <div class="field">
+        <label class="field__label" for="f_tipo">Tipo</label>
+        <select class="field__input" id="f_tipo" name="tipo">
+          <option value="">Todos</option>
+          {% for t, n in nombre_tipo.items() %}<option value="{{ t }}" {{ 'selected' if tipo == t }}>{{ n }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label class="field__label" for="f_estado">Estado</label>
+        <select class="field__input" id="f_estado" name="estado">
+          <option value="">Todos</option>
+          {% for e in ['vigente', 'canjeado', 'vencido', 'anulado'] %}<option value="{{ e }}" {{ 'selected' if estado == e }}>{{ e | capitalize }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="field" style="flex-basis:200px">
+        <label class="field__label" for="f_busca">Buscar</label>
+        <input class="field__input" id="f_busca" name="busca" value="{{ busca }}" placeholder="Código, nombre, evento…" />
+      </div>
+      <button class="btn btn--outline btn--sm" type="submit">Filtrar</button>
+    </form>
+
+    {% if not vales %}
+    <p class="vacio">{{ 'Ningún vale calza con eso.' if (tipo or estado or busca) else 'Todavía no se ha emitido ningún vale.' }}</p>
+    {% endif %}
+    {% for v in vales %}
+    <a class="vale" href="{{ url_for('vale', codigo=v.codigo) }}">
+      <div class="vale__info">
+        <div class="vale__que">{{ v.valido_por }}</div>
+        <div class="vale__meta">
+          {% if v.para_nombre %}Para {{ v.para_nombre }} · {% endif %}{{ v.emitido_txt }}{% if v.emitido_quien %} · emitió {{ v.emitido_quien }}{% endif %}
+          {% if v.tipo == 'giftcard' and es_admin %} · ${{ v.monto_pagado_clp | miles }}{% endif %}
+          {% if v.lote_nombre %} · {{ v.lote_nombre }}{% elif v.motivo %} · {{ v.motivo }}{% endif %}
+          · {{ v.codigo }}
+        </div>
+      </div>
+      <div class="etqs">
+        <span class="etq etq--{{ v.tipo }}">{{ v.nombre_tipo }}</span>
+        <span class="etq etq--{{ v.estado }}">{{ v.estado }}</span>
+      </div>
+    </a>
+    {% endfor %}
+  </section>
+</div></main>
+{% endblock %}
+
+{% block page_js %}
+<script>
+/* Muestra solo los campos del tipo elegido. Sin JavaScript se ven todos y
+   el servidor ignora los que no corresponden (una gift card nunca vence,
+   aunque llegue una fecha). */
+(function () {
+  document.documentElement.classList.add('js');
+  var form = document.getElementById('formEmitir');
+  function mostrar() {
+    var tipo = form.querySelector('input[name="tipo"]:checked').value;
+    form.querySelectorAll('.solo').forEach(function (g) { g.hidden = g.dataset.solo !== tipo; });
+    document.getElementById('monto').required = tipo === 'giftcard';
+  }
+  form.addEventListener('change', function (e) { if (e.target.name === 'tipo') mostrar(); });
+  mostrar();
+})();
+</script>
+{% endblock %}

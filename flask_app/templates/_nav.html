@@ -1,0 +1,60 @@
+{#
+  _nav.html — el nav del header. UNO SOLO para todas las páginas.
+
+  Antes estaba escrito en landing.html, base.html y producto.html, y las tres
+  copias ya se habían separado: base tenía "Admin" pero no "Nosotros", landing
+  tenía "Nosotros" y no mostraba "Admin" nunca (un admin no veía el link en la
+  portada), y producto no mostraba el estado de la sesión.
+
+  Espera en el contexto:
+    inicio   Prefijo de las anclas. En la landing va "" para que el ancla
+             salte sin recargar; en el resto, url_for('home'). Si no viene
+             definido se asume que NO estamos en la landing.
+    usuario  El dict de session["usuario"], o nada si es visitante.
+
+  El menú de cuenta reemplaza a los tres links sueltos (Mi cuenta / Admin /
+  Salir): "Admin" y "Mi cuenta" eran dos puertas al mismo lugar, y Salir no
+  merece ocupar espacio permanente en la barra.
+#}
+{% set base = inicio if inicio is defined else url_for('home') %}
+<nav class="nav" id="nav" aria-label="Navegación principal">
+  <a class="nav__link" href="{{ base }}#inicio">Inicio</a>
+  <a class="nav__link" href="{{ base }}#nosotros">Nosotros</a>
+  <a class="nav__link" href="{{ base }}#carta">Catálogo</a>
+  {% if negocio.tienda_url %}<a class="nav__link" href="{{ base }}#tienda">Tienda</a>{% endif %}
+  <a class="nav__link" href="{{ base }}#talleres">Cursos</a>
+  {# «Deseos» reemplaza a «Puntos», no se suma: el header nunca cupo y
+     sustituir es lo único que cabe (ver la nota del header). Puntos salió
+     porque todavía no funciona —la recarga llega en la Fase 3— y el muro sí.
+     Apunta al ancla de la portada, como el resto del nav; el botón «Ver todo
+     el muro» de la sección es el que lleva a la página /muro.
+     El footer sigue enlazando a los dos: ahí sí hay espacio. #}
+  <a class="nav__link" href="{{ base }}#muro">Comunidad</a>
+
+  {% if usuario %}
+  <div class="acct">
+    <button class="acct__trigger" type="button" id="acctTrigger"
+            aria-haspopup="true" aria-expanded="false" aria-controls="acctMenu">
+      <span class="acct__etiqueta">{{ usuario.etiqueta }}</span>
+      <svg class="acct__chevron" viewBox="0 0 24 24" width="14" height="14" fill="none"
+           stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
+           stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="acct__menu" id="acctMenu" role="menu" aria-labelledby="acctTrigger">
+      <a href="{{ url_for('dashboard') }}" role="menuitem">Mi cuenta</a>
+      {% if usuario.rol == 'admin' %}
+      <a href="{{ url_for('admin_inicio') }}" role="menuitem">Admin</a>
+      {% elif usuario.rol == 'barista' %}
+      <a href="{{ url_for('admin_inicio') }}" role="menuitem">Mesón</a>
+      {% endif %}
+      <a class="acct__salir" href="{{ url_for('salir') }}" role="menuitem">Salir</a>
+    </div>
+  </div>
+  {% else %}
+  {# Entrar va primero y Registrarse después: el que ya tiene cuenta viene a
+     entrar y busca ese botón, y el relleno oscuro queda pegado al menú del
+     carrito, que es donde termina el recorrido de quien vuelve. #}
+  <a class="nav__cta nav__cta--entrar" href="{{ url_for('login') }}">¡Entra!</a>
+  <a class="nav__cta nav__cta--registro" href="{{ url_for('registro') }}">¡Regístrate!</a>
+  {% endif %}
+</nav>

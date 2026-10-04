@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block title %}{{ v.titulo }} · Pedido {{ p.codigo }}{% endblock %}
+{% block descripcion %}El estado de tu pedido para retirar.{% endblock %}
+
+{% block head_extra %}
+<style>
+  /* =====================================================================
+     La página del pedido. Se queda abierta en el celular mientras la
+     persona camina hacia acá, así que lo de arriba es lo único que tiene
+     que leerse de un vistazo: en qué va, y a qué hora. Se actualiza sola.
+     ===================================================================== */
+  .ped { max-width: 560px; }
+  .ped__volver { display: inline-block; color: var(--text-muted); text-decoration: none;
+    font-size: .85rem; margin-bottom: var(--sp-4); }
+  .ped__volver:hover { color: var(--lp-espresso); }
+
+  .estado { border-radius: var(--r-md); padding: var(--sp-4) var(--sp-5);
+    margin-bottom: var(--sp-5); }
+  .estado__tit { font-family: var(--font-display); font-size: 1.3rem; line-height: 1.1;
+    margin: 0 0 4px; }
+  .estado__txt { margin: 0; font-size: .9rem; line-height: 1.5; }
+  .estado--vivo { background: var(--surface-sand); color: var(--lp-coffee-600); }
+  .estado--listo { background: #E7F0E9; color: #1D4A31; }
+  .estado--fin { background: var(--surface-sand); color: var(--text-muted); }
+
+  /* Los cuatro pasos. Un punto por paso unido por una línea: se entiende
+     sin leer, y el paso actual es el único con color. */
+  .pasos { display: grid; grid-template-columns: repeat(4, 1fr); margin: 0 0 var(--sp-6);
+    padding: 0; list-style: none; }
+  .pasos__p { position: relative; text-align: center; font-size: .7rem;
+    color: var(--text-muted); padding-top: 22px; }
+  .pasos__p::before { content: ""; position: absolute; top: 0; left: 50%;
+    transform: translateX(-50%); width: 14px; height: 14px; border-radius: 50%;
+    background: var(--surface-page); border: 2px solid var(--border-strong); z-index: 1; }
+  .pasos__p::after { content: ""; position: absolute; top: 7px; left: -50%; width: 100%;
+    height: 2px; background: var(--border-strong); }
+  .pasos__p:first-child::after { display: none; }
+  .pasos__p--hecho { color: var(--lp-espresso); }
+  .pasos__p--hecho::before { background: var(--lp-forest); border-color: var(--lp-forest); }
+  .pasos__p--hecho::after { background: var(--lp-forest); }
+  .pasos__p--ahora { color: var(--lp-forest); font-weight: var(--fw-bold); }
+  .pasos__p--ahora::before { box-shadow: 0 0 0 4px rgba(32,57,43,.18); }
+
+  .ticket { border: var(--bw) solid var(--border); border-radius: var(--r-lg);
+    background: var(--surface-card); box-shadow: var(--shadow-md); padding: var(--sp-5); }
+  .ticket__cuando { font-family: var(--font-display); font-size: 1.6rem; line-height: 1.05;
+    color: var(--lp-espresso); margin: 0; }
+  .ticket__quien { color: var(--text-muted); margin: 4px 0 0; font-size: .9rem; }
+  .ticket__codigo { font-size: .72rem; letter-spacing: .12em; color: var(--text-muted);
+    font-weight: var(--fw-bold); margin: var(--sp-3) 0 0; }
+
+  .lineas { list-style: none; padding: 0; margin: var(--sp-4) 0 0;
+    border-top: var(--bw) solid var(--divider); }
+  .linea { display: flex; justify-content: space-between; gap: var(--sp-3);
+    padding: var(--sp-2) 0; border-bottom: var(--bw) solid var(--divider); font-size: .92rem; }
+  .linea__n { color: var(--lp-espresso); min-width: 0; overflow-wrap: anywhere; }
+  .linea__v { color: var(--text-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .linea--total { border-bottom: 0; font-weight: var(--fw-bold); }
+  .linea--total .linea__v { color: var(--lp-espresso); }
+  .ticket__pago { margin: var(--sp-2) 0 0; font-size: .85rem; color: var(--text-muted); }
+  .ticket__notas { margin: var(--sp-3) 0 0; font-size: .85rem; color: var(--text-muted);
+    font-style: italic; }
+
+  .bloque { margin-top: var(--sp-5); padding: var(--sp-5); border: var(--bw) solid var(--border);
+    border-radius: var(--r-md); background: var(--surface-card); }
+  .bloque__tit { font-weight: var(--fw-bold); color: var(--lp-espresso); margin: 0 0 6px; }
+  .bloque__txt { margin: 0 0 var(--sp-3); font-size: .9rem; color: var(--text-muted); line-height: 1.5; }
+  .bloque__fila { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+  .bloque__fila .field__input { flex: 1 1 180px; min-width: 0; }
+
+  .cancelar { margin-top: var(--sp-5); font-size: .88rem; }
+  .cancelar summary { cursor: pointer; color: var(--text-muted); }
+  .cancelar[open] summary { margin-bottom: var(--sp-3); }
+
+  .ped__ayuda { margin-top: var(--sp-6); font-size: .85rem; color: var(--text-muted); }
+  .ped__ayuda a { color: var(--lp-forest); font-weight: var(--fw-semibold); }
+</style>
+{% endblock %}
+
+{% block contenido %}
+<main class="section"><div class="container ped">
+  <a class="ped__volver" href="{{ url_for('pedir') }}">← Pedir otra cosa</a>
+
+  {% set clase = 'estado--listo' if p.estado == 'listo' else ('estado--vivo' if v.vivo else 'estado--fin') %}
+  <div class="estado {{ clase }}" role="status" aria-live="polite">
+    <p class="estado__tit">{{ v.titulo }}</p>
+    <p class="estado__txt">{{ v.texto }}</p>
+  </div>
+
+  {% if v.paso is not none %}
+  <ol class="pasos" aria-label="Avance del pedido">
+    {% for e in pasos %}
+    <li class="pasos__p{{ ' pasos__p--hecho' if loop.index0 <= v.paso }}{{ ' pasos__p--ahora' if loop.index0 == v.paso }}"
+        {% if loop.index0 == v.paso %}aria-current="step"{% endif %}>{{ etiqueta_paso[e] }}</li>
+    {% endfor %}
+  </ol>
+  {% endif %}
+
+  <div class="ticket">
+    <p class="ticket__cuando">{{ v.franja_dia }} · {{ v.franja_hora }}</p>
+    <p class="ticket__quien">A nombre de {{ p.nombre }}</p>
+    <ul class="lineas">
+      {% for it in p['items'] %}
+      <li class="linea">
+        <span class="linea__n">{{ it.cantidad }}× {{ it.nombre }}</span>
+        <span class="linea__v">${{ (it.precio_clp * it.cantidad) | miles }}</span>
+      </li>
+      {% endfor %}
+      <li class="linea linea--total">
+        <span class="linea__n">Total</span>
+        <span class="linea__v">${{ p.total_clp | miles }} CLP</span>
+      </li>
+    </ul>
+    <p class="ticket__pago">
+      {% if v.pagado %}Pagado.{% elif p.estado in ('cancelado', 'no_retirado') %}Sin cobro.{% else %}Pagas al retirar.{% endif %}
+    </p>
+    {% if p.notas %}<p class="ticket__notas">«{{ p.notas }}»</p>{% endif %}
+    <p class="ticket__codigo">PEDIDO {{ p.codigo }}</p>
+  </div>
+
+  {% if v.vivo and cfg and cfg.direccion_retiro %}
+  <div class="bloque">
+    <p class="bloque__tit">Dónde retirar</p>
+    <p class="bloque__txt">{{ cfg.direccion_retiro }}</p>
+    <a class="btn btn--outline btn--sm" target="_blank" rel="noopener noreferrer"
+       href="https://www.google.com/maps/search/?api=1&query={{ cfg.direccion_retiro | urlencode }}">Cómo llegar ↗</a>
+  </div>
+  {% endif %}
+
+  {% if v.vivo %}
+  <div class="bloque">
+    {% if v.afuera %}
+    <p class="bloque__tit">Avisaste que llegaste a las {{ tiempo.hora(p.afuera_at) }}</p>
+    <p class="bloque__txt" style="margin:0">Ya sabemos que estás afuera{% if p.afuera_detalle %} ({{ p.afuera_detalle }}){% endif %}.</p>
+    {% else %}
+    <p class="bloque__tit">¿Ya llegaste?</p>
+    <p class="bloque__txt">Avísanos y te lo llevamos. Si quieres, dinos cómo reconocerte.</p>
+    <form method="POST" action="{{ url_for('pedido_afuera', codigo=p.codigo) }}" class="bloque__fila">
+      <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+      <input class="field__input" name="detalle" maxlength="80" placeholder="Auto gris, en la reja…"
+             aria-label="Cómo reconocerte (opcional)" />
+      <button class="btn btn--primary" type="submit">Estoy afuera</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if v.cancelable %}
+  <details class="cancelar">
+    <summary>¿No vas a poder venir?</summary>
+    <form method="POST" action="{{ url_for('pedido_cancelar', codigo=p.codigo) }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+      <p style="margin:0 0 var(--sp-3);color:var(--text-muted)">Mientras no lo empecemos a juntar, puedes cancelarlo acá sin costo.</p>
+      <button class="btn btn--outline btn--sm" type="submit">Sí, cancelar el pedido</button>
+    </form>
+  </details>
+  {% endif %}
+
+  <p class="ped__ayuda">
+    Guarda esta página: es la única forma de ver tu pedido.
+    {% if negocio.whatsapp_url %}¿Algo cambió? <a href="{{ negocio.whatsapp_url }}?text={{ ('Hola, sobre mi pedido ' ~ p.codigo) | urlencode }}" target="_blank" rel="noopener noreferrer">Escríbenos por WhatsApp</a>.{% endif %}
+  </p>
+</div></main>
+{% endblock %}
+
+{% block page_js %}
+{% if v.vivo %}
+<script>
+/* Se refresca sola mientras el pedido está en curso. Pregunta cada 15
+   segundos —un café no cambia de estado más rápido que eso— y solo con la
+   pestaña visible: con el teléfono en el bolsillo no gasta datos ni batería.
+   Cuando el estado cambia, recarga la página entera: así el aviso, los
+   pasos y los botones quedan coherentes sin repetir la lógica acá. */
+(function () {
+  var actual = {{ p.estado | tojson }};
+  var url = {{ url_for('api_pedido', codigo=p.codigo) | tojson }};
+  function mirar() {
+    if (document.hidden) return;
+    fetch(url, { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d || d.estado === actual) return;
+        if (d.estado === 'listo' && navigator.vibrate) navigator.vibrate([120, 80, 120]);
+        location.reload();
+      })
+      .catch(function () {});
+  }
+  setInterval(mirar, 15000);
+  document.addEventListener('visibilitychange', mirar);
+})();
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,67 @@
+{#
+  La ruleta dibujada. La usan la página del giro y la vista previa del panel.
+
+  Recibe:
+    rueda     el dict de ruleta_model.geometria()
+    rotacion  los grados con que parte (para que el gajo 0 —o el que salió—
+              quede bajo el puntero)
+    tam       clase de tamaño opcional ('ruleta--chica' en el panel)
+
+  Es UN solo SVG con dos capas: la rueda (#rueda), que es lo único que gira,
+  y lo fijo —el puntero y el pie— dibujado encima. Las mascotas van arriba
+  como <img> y el sello del logo en la placa del pie.
+
+  El texto de los gajos no usa la tipografía de títulos del sitio: le faltan
+  signos (el % y otros) y en una ruleta el premio tiene que leerse sí o sí.
+#}
+<div class="ruleta {{ tam or '' }}">
+  {% if negocio.mascotas %}
+  <div class="ruleta__mascotas" aria-hidden="true">
+    <img class="ruleta__mascota ruleta__mascota--izq" src="{{ url_for('static', filename=negocio.ruleta.mascota_izq) }}" alt="" />
+    <img class="ruleta__mascota ruleta__mascota--der" src="{{ url_for('static', filename=negocio.ruleta.mascota_der) }}" alt="" />
+  </div>
+  {% endif %}
+
+  <div class="ruleta__cuadro">
+  <svg class="ruleta__svg" viewBox="0 0 400 470" role="img"
+       aria-label="Ruleta de {{ rueda.n }} gajos: {% for g in rueda.gajos %}{{ g.premio }}{% if not loop.last %}, {% endif %}{% endfor %}">
+    {# --- El pie en A. Va DETRÁS de la rueda: en la de madera está delante,
+         pero tapaba el premio del gajo de abajo. Así solo asoman las patas. #}
+    <path class="ruleta__pie" d="M200 214 L118 452 L282 452 Z M200 300 L150 430 L250 430 Z"
+          fill="#111" fill-rule="evenodd" />
+    <rect x="92" y="448" width="216" height="14" rx="4" fill="#111" />
+
+    {# --- La rueda: lo único que gira ---------------------------------- #}
+    <g id="rueda" class="ruleta__rueda" style="transform: rotate({{ rotacion }}deg)">
+      <circle cx="{{ rueda.cx }}" cy="{{ rueda.cy }}" r="{{ rueda.r + 10 }}" fill="#111" />
+      {% for g in rueda.gajos %}
+      <path d="{{ g.d }}" fill="{{ g.fondo }}" />
+      {% endfor %}
+      {% for g in rueda.gajos %}
+      <text transform="rotate({{ g.giro_texto }} {{ rueda.cx }} {{ rueda.cy }})"
+            x="{{ (rueda.cx - rueda.r + 16) if g.volteado else (rueda.cx + rueda.r - 16) }}" y="{{ rueda.cy }}"
+            text-anchor="{{ 'start' if g.volteado else 'end' }}"
+            fill="{{ g.tinta }}" font-size="{{ g.fuente }}"
+            class="ruleta__texto">{{ g.premio }}</text>
+      {% endfor %}
+      {% for c in rueda.clavos %}
+      <circle cx="{{ c.x }}" cy="{{ c.y }}" r="3.4" fill="#CFCFCF" />
+      {% endfor %}
+    </g>
+
+    {# El eje, encima de la rueda. #}
+    <circle cx="{{ rueda.cx }}" cy="{{ rueda.cy }}" r="15" fill="#111" />
+    <circle cx="{{ rueda.cx }}" cy="{{ rueda.cy }}" r="6" fill="#2A2A2A" />
+
+    {# --- El puntero, arriba. Blanco con borde negro, como el de madera. #}
+    <path id="puntero" class="ruleta__puntero"
+          d="M184 6 L216 6 L200 46 Z" fill="#FFFFFF" stroke="#111" stroke-width="4"
+          stroke-linejoin="round" />
+  </svg>
+
+  {# El sello: la placa del pie con el logo del negocio. #}
+  <div class="ruleta__placa">
+    <img src="{{ url_for('static', filename=negocio.logo) }}" alt="{{ negocio.nombre }}" />
+  </div>
+  </div>
+</div>

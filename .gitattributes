@@ -1,0 +1,8 @@
+# Normaliza los finales de línea. Sin esto, un archivo guardado en Windows
+# aparece entero como modificado al mirarlo desde Linux, y al revés.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.woff2 binary
+*.ttf binary

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+{% include '_pwa.html' %}
+<title>{% block title %}{{ negocio.nombre }}{% endblock %}</title>
+<meta name="description" content="{% block descripcion %}{% endblock %}" />
+<meta name="robots" content="noindex, follow" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/account.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/cuenta-nav.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/carrito.css') }}" />
+{% include '_marca.html' %}
+{% block head_extra %}{% endblock %}
+{% include '_temporada.html' %}
+</head>
+<body>
+<header class="header"><div class="container header__inner">
+<a class="header__brand" href="{{ url_for('home') }}" aria-label="{{ negocio.nombre }} — Inicio"><img class="header__brand-logo" src="{{ url_for('static', filename=negocio.logo) }}" alt="" /><span class="header__brand-name">{{ negocio.nombre_corto }}</span><span class="header__brand-tag">{{ negocio.tag }}</span></a>
+{% include '_nav.html' %}
+{% include '_carrito-boton.html' %}
+<button class="header__toggle" id="navToggle" aria-label="Abrir menú" aria-expanded="false"><span></span><span></span><span></span></button>
+</div></header>
+
+{% with mensajes = get_flashed_messages(with_categories=true) %}
+  {% if mensajes %}
+  <div class="container" style="padding-top:var(--sp-4)">
+    {% for categoria, texto in mensajes %}
+    <div class="alert alert--{{ categoria }} alert--visible">{{ texto }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+{% endwith %}
+
+{#
+  Aviso de correo sin verificar. NO bloquea nada: se entra y se navega igual
+  (decisión de Seba). Solo aparece cuando la sesión dice explícitamente que
+  el correo no está verificado — con `is defined` las sesiones abiertas antes
+  de que existiera este campo no lo ven, en vez de mostrarles un aviso falso
+  hasta que vuelvan a entrar.
+#}
+{% if usuario and usuario.email_verificado is defined and not usuario.email_verificado %}
+<div class="container" style="padding-top:var(--sp-4)">
+  <div class="alert alert--info alert--visible" style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-3);justify-content:space-between">
+    <span>Confirma tu correo <b>{{ usuario.email }}</b> para que podamos avisarte de tus pedidos y cursos.</span>
+    <form method="POST" action="{{ url_for('reenviar_verificacion') }}" style="margin:0">
+      <input type="hidden" name="csrf" value="{{ csrf_actual() }}" />
+      <button class="btn btn--outline btn--sm" type="submit">Reenviar enlace</button>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+{% block contenido %}{% endblock %}
+
+<footer class="footer"><div class="container footer__grid">
+<div><img class="footer__logo" src="{{ url_for('static', filename=negocio.logo) }}" alt="" /><div class="footer__brand-name">{{ negocio.nombre_corto }}<br/>{{ negocio.tag|title }}</div><p class="footer__text">{{ negocio.lema }}. {{ negocio.ciudad }}, {{ negocio.pais }}.</p></div>
+<div><h4 class="footer__title">Explorar</h4><ul class="footer__list">
+<li><a class="footer__link" href="{{ url_for('home') }}#carta">Catálogo</a></li>
+{% if barra_activa() %}<li><a class="footer__link" href="{{ url_for('pedir') }}">Pedir para retirar</a></li>{% endif %}
+{% if negocio.tienda_url %}<li><a class="footer__link" href="{{ url_for('home') }}#tienda">Tienda online</a></li>{% endif %}
+<li><a class="footer__link" href="{{ url_for('home') }}#talleres">Cursos</a></li>
+<li><a class="footer__link" href="{{ url_for('home') }}#puntos">Puntos</a></li>
+<li><a class="footer__link" href="{{ url_for('muro') }}">Comunidad</a></li>
+<li><a class="footer__link" href="{{ url_for('dashboard') }}">Mi cuenta</a></li>
+</ul></div>
+<div><h4 class="footer__title">Visítanos</h4><p class="footer__text" style="max-width:none">{{ negocio.direccion }}, {{ negocio.ciudad }}<br/>{{ negocio.region }}, {{ negocio.pais }}<br/>{% for h in negocio.horario %}{{ h }}{% if not loop.last %}<br/>{% endif %}{% endfor %}</p></div>
+{% include '_footer_contacto.html' %}
+</div>{% include '_footer_credito.html' %}</footer>
+<script src="{{ url_for('static', filename='js/account.js') }}"></script>
+<script src="{{ url_for('static', filename='js/carrito.js') }}"></script>
+{% block page_js %}{% endblock %}
+</body>
+</html>

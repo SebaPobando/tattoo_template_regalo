@@ -1,0 +1,92 @@
+/* ==========================================================================
+   destacados.css — los cafés que el admin resalta en la tienda
+
+   Una tarjeta destacada lleva un borde del color elegido, un brillo suave y
+   una cinta arriba a la izquierda («Micro lote», «Edición especial»). Los
+   colores son una lista cerrada (COLORES en destacado_model.py): cada uno
+   define tres variables y el resto de las reglas las usan.
+
+   Los selectores van con DOS clases (.product.product--destacado) a
+   propósito: las reglas base de .product viven en el <style> de
+   landing.html, que se carga DESPUÉS de este archivo, y con una sola clase
+   le ganarían.
+   ========================================================================== */
+
+.product.product--destacado {
+  --d-borde: #C9A24A;
+  --d-brillo: rgba(201, 162, 74, .38);
+  --d-cinta-fondo: #C9A24A;
+  --d-cinta-texto: #2A1C12;
+  position: relative;
+  border: 3px solid var(--d-borde);
+  box-shadow: 0 0 0 4px var(--d-brillo), var(--shadow-md);
+}
+.product.product--destacado:hover { box-shadow: 0 0 0 5px var(--d-brillo), var(--shadow-lg); }
+
+/* Cada color pisa las variables con DOS clases (.product.product--d-x),
+   igual que la regla de arriba, y va DESPUÉS: a igual especificidad gana
+   la última. Con una sola clase perdían contra .product.product--destacado
+   y todo salía dorado, eligiera el admin el color que eligiera. */
+.product.product--d-dorado { --d-borde: #C9A24A; --d-brillo: rgba(201, 162, 74, .35);
+  --d-cinta-fondo: #C9A24A; --d-cinta-texto: #2A1C12; }
+.product.product--d-verde { --d-borde: #20392B; --d-brillo: rgba(32, 57, 43, .22);
+  --d-cinta-fondo: #20392B; --d-cinta-texto: #FFFFFF; }
+.product.product--d-rojo { --d-borde: #A3271F; --d-brillo: rgba(163, 39, 31, .22);
+  --d-cinta-fondo: #A3271F; --d-cinta-texto: #FFFFFF; }
+.product.product--d-negro { --d-borde: #141414; --d-brillo: rgba(20, 20, 20, .18);
+  --d-cinta-fondo: #141414; --d-cinta-texto: #E9C77E; }
+.product.product--d-cafe { --d-borde: #5A3A22; --d-brillo: rgba(90, 58, 34, .24);
+  --d-cinta-fondo: #5A3A22; --d-cinta-texto: #F3E3C3; }
+.product.product--d-terracota { --d-borde: #B5592E; --d-brillo: rgba(181, 89, 46, .24);
+  --d-cinta-fondo: #B5592E; --d-cinta-texto: #FFFFFF; }
+.product.product--d-vino { --d-borde: #6B1E33; --d-brillo: rgba(107, 30, 51, .22);
+  --d-cinta-fondo: #6B1E33; --d-cinta-texto: #F3D9A4; }
+.product.product--d-azul { --d-borde: #1F3A5F; --d-brillo: rgba(31, 58, 95, .22);
+  --d-cinta-fondo: #1F3A5F; --d-cinta-texto: #FFFFFF; }
+.product.product--d-plata { --d-borde: #8E979F; --d-brillo: rgba(142, 151, 159, .30);
+  --d-cinta-fondo: #C9CED3; --d-cinta-texto: #22272B; }
+.product.product--d-rosa { --d-borde: #C76B8A; --d-brillo: rgba(199, 107, 138, .26);
+  --d-cinta-fondo: #C76B8A; --d-cinta-texto: #FFFFFF; }
+
+/* Verde y dorado: el borde es un degradado. Un border no admite degradados
+   con esquinas redondeadas, así que se dibuja con dos fondos: el de la
+   tarjeta adentro (padding-box) y el degradado por debajo (border-box), con
+   el borde transparente dejando ver el segundo. */
+.product.product--d-verde_dorado {
+  --d-brillo: rgba(201, 162, 74, .30);
+  --d-cinta-fondo: linear-gradient(90deg, #20392B, #2E5640);
+  --d-cinta-texto: #E9C77E;
+  border-color: transparent;
+  background:
+    linear-gradient(var(--surface-card), var(--surface-card)) padding-box,
+    linear-gradient(135deg, #20392B 0%, #C9A24A 55%, #20392B 100%) border-box;
+}
+
+.product__cinta {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 3;
+  max-width: calc(100% - 24px);
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--d-cinta-fondo);
+  color: var(--d-cinta-texto);
+  font-family: var(--font-body, system-ui, sans-serif);
+  font-size: .7rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .18);
+  pointer-events: none;
+}
+
+/* La pastilla «Especiales» de la tienda, con un toque dorado para que se
+   note que no es una categoría más. */
+.shop__tab.shop__tab--especiales { border-color: #C9A24A; }
+.shop__tab.shop__tab--especiales::before { content: "★ "; color: #C9A24A; }
+.shop__tab.shop__tab--especiales.shop__tab--active::before { color: inherit; }

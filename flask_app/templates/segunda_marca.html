@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+{# Sin manifest a propósito: es otra marca, y ofrecer «instalar
+   {{ negocio.nombre }}» desde acá sería raro. Solo el color de la barra,
+   que en una página oscura no puede quedarse con el fondo de la tienda. #}
+<meta name="theme-color" content="{{ negocio.segunda.color }}" />
+<title>{{ negocio.segunda.nombre }} · {{ negocio.segunda.lema }} · {{ negocio.ciudad }}</title>
+<meta name="description" content="{{ negocio.segunda.nombre }}: {{ negocio.segunda.lema | lower }} en {{ negocio.ciudad }}. {{ negocio.segunda.descripcion }}" />
+<link rel="icon" type="image/jpeg" href="{{ url_for('static', filename=negocio.segunda.logo) }}" />
+
+<!--
+  {{ negocio.segunda.nombre }} NO extiende base.html a propósito.
+
+  base.html es la identidad de la tienda. {{ negocio.segunda.nombre }} (el
+  estudio) es negro, rojo y crema, con su propia voz. Meterlo dentro del header
+  de la tienda lo convertiría en una subsección, y suelen ser dos negocios
+  distintos. Esta página se sostiene sola.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+<style>
+  /* Anton va alojada acá, no traída de Google Fonts.
+     Es la tipografía que carga toda la identidad de la marca: si la CDN falla
+     —una conexión mala en {{ negocio.ciudad }}, un bloqueo de red— la página se cae a una
+     sans cualquiera y deja de parecer {{ negocio.segunda.nombre }}. Son 18 KB. Montserrat, que
+     solo hace el texto de apoyo, sí puede venir de Google: si no llega, la
+     sans del sistema se ve bien igual.
+     swap: el texto se pinta al tiro con la de respaldo y cambia cuando llega,
+     en vez de dejar el hero en blanco mientras carga. */
+  @font-face {
+    font-family: 'Anton'; font-style: normal; font-weight: 400; font-display: swap;
+    src: url("{{ url_for('static', filename='fonts/anton-latin-400-normal.woff2') }}") format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+                   U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193,
+                   U+2212, U+2215, U+FEFF, U+FFFD;
+  }
+  @font-face {
+    font-family: 'Anton'; font-style: normal; font-weight: 400; font-display: swap;
+    src: url("{{ url_for('static', filename='fonts/anton-latin-ext-400-normal.woff2') }}") format('woff2');
+    unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB,
+                   U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+  }
+
+  :root {
+    /* Negro, rojo y crema: la paleta del estudio. Se cambia acá. */
+    --g-negro:     #0A0908;
+    --g-carbon:    #141210;
+    --g-rojo:      #C41E24;
+    --g-rojo-vivo: #E03A32;
+    --g-oro:       #E8C88A;
+    --g-crema:     #F3E7D0;
+    --g-humo:      #9A9086;
+    --g-borde:     rgba(232, 200, 138, .18);
+  }
+
+  * { box-sizing: border-box }
+  html { scroll-behavior: smooth }
+  body {
+    margin: 0;
+    background: var(--g-negro);
+    color: var(--g-crema);
+    font-family: 'Montserrat', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* La textura de cemento de la carta impresa, hecha con degradados: dos
+     radiales sucios sobre el negro. Sin imagen de fondo que pese 2 MB. */
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 0%,   rgba(196, 30, 36, .10), transparent 60%),
+      radial-gradient(ellipse 70% 50% at 90% 30%,  rgba(232, 200, 138, .05), transparent 55%),
+      radial-gradient(ellipse 90% 70% at 50% 100%, rgba(196, 30, 36, .07), transparent 60%);
+  }
+
+  .envoltura { width: min(1080px, 100% - 2.5rem); margin-inline: auto }
+
+  h1, h2, h3, .display {
+    font-family: 'Anton', 'Montserrat', system-ui, sans-serif;
+    font-weight: 400; letter-spacing: .02em; text-transform: uppercase;
+    margin: 0; line-height: 1.05;
+  }
+
+  /* ---------------------------------------------------------------- barra */
+  .barra {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(10, 9, 8, .92); backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--g-borde);
+  }
+  .barra__interior {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem; height: 66px;
+  }
+  .barra__marca { display: inline-flex; align-items: center; gap: .7rem; text-decoration: none }
+  .barra__logo { height: 42px; width: 42px; border-radius: 6px; object-fit: cover }
+  .barra__nombre { font-family: 'Anton', sans-serif; font-size: 1.25rem;
+    color: var(--g-crema); letter-spacing: .06em }
+  .barra__enlaces { display: flex; gap: 1.4rem; align-items: center }
+  .barra__enlace { color: var(--g-humo); text-decoration: none; font-size: .82rem;
+    font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+    white-space: nowrap }
+  .barra__enlace:hover { color: var(--g-oro) }
+  /* En 390 px no caben el logo, el nombre y tres enlaces: el nombre se va
+     primero porque el logo ya lo dice, y se aprieta el espaciado. */
+  @media (max-width: 720px) { .barra__enlaces .solo-ancho { display: none } }
+  @media (max-width: 560px) {
+    .barra__nombre { display: none }
+    .barra__enlaces { gap: 1rem }
+    .barra__enlace { font-size: .72rem; letter-spacing: .06em }
+  }
+
+  /* ----------------------------------------------------------------- hero */
+  .hero { padding: clamp(3rem, 9vw, 6rem) 0 clamp(2rem, 5vw, 3.5rem); text-align: center }
+  .hero__logo { width: clamp(120px, 26vw, 190px); height: auto; border-radius: 12px;
+    margin-bottom: 1.6rem }
+  .hero__titulo { font-size: clamp(2.6rem, 11vw, 5.5rem); color: var(--g-crema);
+    text-shadow: 0 0 40px rgba(196, 30, 36, .35) }
+  .hero__bajada { color: var(--g-oro); letter-spacing: .34em; text-transform: uppercase;
+    font-size: clamp(.62rem, 2.2vw, .8rem); font-weight: 700; margin-top: .9rem }
+  .hero__lema {
+    display: inline-block; margin-top: 1.8rem; padding: .5rem 1.4rem;
+    background: var(--g-rojo); color: #fff; font-family: 'Anton', sans-serif;
+    font-size: clamp(.85rem, 3vw, 1.05rem); letter-spacing: .12em;
+    text-transform: uppercase; transform: rotate(-1.2deg);
+  }
+  .hero__nota { color: var(--g-humo); font-size: .9rem; margin-top: 1.6rem; line-height: 1.7 }
+
+  /* ------------------------------------------------------------ categorías */
+  .seccion { padding-bottom: clamp(2.5rem, 6vw, 4rem) }
+  .seccion__tit {
+    display: inline-block; background: var(--g-rojo); color: #fff;
+    padding: .35rem 1.1rem; font-size: clamp(1.2rem, 4.5vw, 1.7rem);
+    letter-spacing: .06em; margin-bottom: 1.8rem;
+  }
+  .relato {
+    max-width: 46rem; margin: 0 auto; text-align: center;
+    color: var(--g-rojo-vivo); font-weight: 700; line-height: 1.6;
+    font-size: clamp(.85rem, 2.6vw, 1rem); text-transform: uppercase;
+    letter-spacing: .02em;
+  }
+  /* Cuando va dentro de la grilla, cruza las dos columnas: es un intertítulo
+     entre platos, no una tarjeta más. */
+  .relato--fila { grid-column: 1 / -1; background: var(--g-negro);
+    padding: 2.2rem 1.4rem }
+
+  .platos { display: grid; gap: 1px; background: var(--g-borde) }
+  @media (min-width: 780px) { .platos { grid-template-columns: 1fr 1fr } }
+
+  .plato {
+    background: var(--g-carbon); padding: 1.3rem 1.4rem;
+    display: flex; flex-direction: column; gap: .45rem;
+  }
+  .plato__linea { display: flex; align-items: baseline; gap: .8rem; justify-content: space-between }
+  .plato__nombre { font-family: 'Anton', sans-serif; font-size: 1.15rem;
+    letter-spacing: .03em; color: #fff; text-transform: uppercase }
+  .plato__desc { color: var(--g-humo); font-size: .84rem; line-height: 1.55 }
+  .plato__etq {
+    align-self: flex-start; font-size: .6rem; letter-spacing: .16em;
+    text-transform: uppercase; font-weight: 700; color: var(--g-negro);
+    background: var(--g-oro); padding: .2rem .55rem; border-radius: 3px;
+  }
+
+  /* Los dos precios. El familiar manda visualmente; el individual va al lado,
+     más chico, con su etiqueta — igual que en la carta impresa. */
+  .precios { display: flex; align-items: baseline; gap: .7rem; white-space: nowrap }
+  .precio { font-family: 'Anton', sans-serif; font-size: 1.15rem; color: var(--g-oro) }
+  .precio--ind { font-size: .95rem; color: var(--g-humo) }
+  .precio--ind::before { content: "|"; color: var(--g-borde); margin-right: .55rem }
+  .precio__et { display: block; font-family: 'Montserrat', sans-serif;
+    font-size: .58rem; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--g-humo); font-weight: 600; text-align: right; margin-top: 1px }
+
+  /* ------------------------------------------------------------------ pie */
+  .cierre { text-align: center; padding: clamp(2.5rem, 7vw, 4rem) 0;
+    border-top: 3px solid var(--g-rojo) }
+  .cierre__lema { font-family: 'Anton', sans-serif; font-style: italic;
+    font-size: clamp(1.05rem, 4vw, 1.6rem); color: var(--g-oro);
+    letter-spacing: .04em; margin-bottom: 1.8rem }
+  .credenciales { color: var(--g-humo); font-size: .8rem; line-height: 2;
+    letter-spacing: .08em; text-transform: uppercase }
+  .wsp {
+    display: inline-flex; align-items: center; gap: .6rem; margin-top: 1.6rem;
+    background: #25D366; color: #06301A; text-decoration: none;
+    font-weight: 700; font-size: .95rem; padding: .8rem 1.6rem; border-radius: 999px;
+  }
+  .wsp:hover { filter: brightness(1.08) }
+  .pie { text-align: center; padding: 2rem 0 3rem; color: #5C554E; font-size: .75rem }
+  .pie a { color: var(--g-humo) }
+
+  .vacio { text-align: center; color: var(--g-humo); padding: 3rem 1rem;
+    border: 1px dashed var(--g-borde); border-radius: 8px }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .plato { transition: background .18s ease }
+    .plato:hover { background: #1B1815 }
+  }
+</style>
+</head>
+<body>
+
+<header class="barra">
+  <div class="envoltura barra__interior">
+    <a class="barra__marca" href="#">
+      <img class="barra__logo" src="{{ url_for('static', filename=negocio.segunda.logo) }}"
+           alt="{{ negocio.segunda.nombre }}" />
+      <span class="barra__nombre">{{ negocio.segunda.nombre }}</span>
+    </a>
+    <nav class="barra__enlaces">
+      <a class="barra__enlace" href="#carta">Servicios</a>
+      <a class="barra__enlace solo-ancho" href="#contacto">Contacto</a>
+      {# El puente de vuelta a la tienda. Discreto: son marcas hermanas,
+         no una el menú de la otra. #}
+      <a class="barra__enlace" href="{{ url_for('home') }}">{{ negocio.nombre_corto }} ↗</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="envoltura">
+    <img class="hero__logo" src="{{ url_for('static', filename=negocio.segunda.logo) }}"
+         alt="Logo de {{ negocio.segunda.nombre }}" />
+    <h1 class="hero__titulo">{{ negocio.segunda.nombre }}</h1>
+    <p class="hero__bajada">{{ negocio.segunda.lema }}</p>
+    <div class="hero__lema">{{ negocio.segunda.descripcion }}</div>
+    <p class="hero__nota">En {{ negocio.direccion }}, {{ negocio.ciudad }}.</p>
+  </div>
+</section>
+
+<main class="envoltura" id="carta">
+  {% for cat in menu %}
+  <section class="seccion">
+    <h2 class="seccion__tit">{{ cat.label }}</h2>
+
+    <div class="platos">
+      {% for it in cat['items'] %}
+
+
+      <article class="plato">
+        {% if it.tag %}<span class="plato__etq">{{ it.tag }}</span>{% endif %}
+        <div class="plato__linea">
+          <h3 class="plato__nombre">{{ it.name }}</h3>
+          <div class="precios">
+            <span class="precio">${{ '{:,.0f}'.format(it.clp).replace(',', '.') }}</span>
+            {% if it.clp_ind %}
+            <span class="precio precio--ind">
+              ${{ '{:,.0f}'.format(it.clp_ind).replace(',', '.') }}
+              <span class="precio__et">2º precio</span>
+            </span>
+            {% endif %}
+          </div>
+        </div>
+        {% if it.desc %}<p class="plato__desc">{{ it.desc }}</p>{% endif %}
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+  {% else %}
+  <div class="vacio">Estamos preparando la lista de servicios. Escríbenos por WhatsApp.</div>
+  {% endfor %}
+</main>
+
+<section class="cierre" id="contacto">
+  <div class="envoltura">
+    <p class="cierre__lema">Agenda tu sesión</p>
+    <div class="credenciales">
+      Cotiza tu diseño por WhatsApp<br />
+      Material estéril y desechable<br />
+      En {{ negocio.direccion }}, {{ negocio.ciudad }}
+    </div>
+    <a class="wsp" href="{{ negocio.whatsapp_url }}"
+       target="_blank" rel="noopener">Escríbenos por WhatsApp · {{ negocio.telefono }}</a>
+  </div>
+</section>
+
+<footer class="pie">
+  <div class="envoltura">
+    {{ negocio.segunda.nombre }} · {{ negocio.ciudad }}, {{ negocio.pais }} ·
+    <a href="{{ url_for('home') }}">{{ negocio.nombre }}</a>
+  </div>
+</footer>
+
+</body>
+</html>

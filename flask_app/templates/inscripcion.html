@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Tu voucher' if i.activo else 'Tu inscripción' }} · {{ i.actividad }}{% endblock %}
+{% block descripcion %}Tu inscripción a {{ i.actividad }}.{% endblock %}
+
+{% block head_extra %}
+<style>
+  /* =====================================================================
+     La página de la inscripción. Es la misma para los dos momentos: lo que
+     falta por hacer arriba, y el voucher abajo cuando el pago ya está
+     confirmado. Por eso el ticket se pinta siempre, pero solo trae código y
+     QR cuando vale.
+     ===================================================================== */
+  .ins { max-width: 560px; }
+
+  .ins__volver { display:inline-block; color:var(--text-muted); text-decoration:none;
+    font-size:.85rem; margin-bottom:var(--sp-4) }
+  .ins__volver:hover { color:var(--lp-espresso) }
+
+  /* --- El aviso de estado ---------------------------------------------- */
+  .estado { border-radius:var(--r-md); padding:var(--sp-4) var(--sp-5);
+    margin-bottom:var(--sp-5) }
+  .estado__tit { font-family:var(--font-display); font-size:1.15rem; line-height:1.1;
+    margin:0 0 4px }
+  .estado__txt { margin:0; font-size:.9rem; line-height:1.5 }
+  .estado--espera { background:var(--lp-gold-bg); color:#9B0D23 }
+  .estado--revision { background:var(--surface-sand); color:var(--lp-coffee-600) }
+  .estado--ok { background:#E7F0E9; color:#1D4A31 }
+  .estado--frio { background:var(--surface-sand); color:var(--text-muted) }
+
+  /* --- El ticket --------------------------------------------------------
+     Dos mitades y un corte entre ellas. El corte es un borde punteado con
+     dos muescas redondas a los lados, dibujadas con radial-gradient: es la
+     forma de un boleto y se entiende sin leer nada. */
+  .ticket { border:var(--bw) solid var(--border); border-radius:var(--r-lg);
+    background:var(--surface-card); box-shadow:var(--shadow-md); overflow:hidden }
+  .ticket--activo { border-color:var(--lp-forest) }
+  .ticket--usado { opacity:.72 }
+
+  .ticket__afiche { display:block; width:100%; height:auto;
+    background:var(--surface-sand) }
+
+  .ticket__cuerpo { padding:var(--sp-5) }
+  .ticket__marca { font-size:.68rem; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--text-muted); font-weight:var(--fw-bold) }
+  .ticket__nombre { font-family:var(--font-display); font-size:1.5rem; line-height:1.08;
+    color:var(--lp-espresso); margin:6px 0 var(--sp-4) }
+
+  .ticket__datos { display:grid; gap:var(--sp-3) }
+  .fila { display:flex; gap:var(--sp-3); align-items:baseline }
+  .fila__et { flex:none; width:64px; font-size:.66rem; text-transform:uppercase;
+    letter-spacing:.1em; color:var(--text-muted); font-weight:var(--fw-semibold) }
+  .fila__v { color:var(--lp-espresso); font-weight:var(--fw-semibold); font-size:.95rem }
+
+  /* --- El corte y la parte del código ---------------------------------- */
+  .ticket__corte { position:relative; height:26px;
+    background:
+      radial-gradient(circle at 0 50%, var(--surface-page) 12px, transparent 13px),
+      radial-gradient(circle at 100% 50%, var(--surface-page) 12px, transparent 13px) }
+  .ticket__corte::after { content:""; position:absolute; left:20px; right:20px; top:50%;
+    border-top:2px dashed var(--border-strong) }
+
+  .ticket__pie { padding:0 var(--sp-5) var(--sp-5); text-align:center }
+  .codigo { font-family:var(--font-display); font-size:clamp(1.05rem, 5.4vw, 2rem);
+    letter-spacing:.04em; color:var(--lp-forest); line-height:1.1; margin:0 0 4px;
+    white-space:nowrap }
+  .codigo__et { font-size:.68rem; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--text-muted); font-weight:var(--fw-bold); margin:0 0 var(--sp-3) }
+  .qr { width:170px; max-width:60%; height:auto; margin:var(--sp-4) auto 0; display:block }
+  .qr svg { display:block; width:100%; height:auto }
+  .qr path { fill:var(--lp-espresso) }
+
+  .sello { display:inline-block; margin-top:var(--sp-3); padding:6px 14px;
+    border:2px solid currentColor; border-radius:var(--r-pill); color:var(--text-muted);
+    font-size:.7rem; letter-spacing:.14em; text-transform:uppercase;
+    font-weight:var(--fw-bold); transform:rotate(-3deg) }
+
+  /* --- Lo que falta hacer ---------------------------------------------- */
+  .pasos { margin-top:var(--sp-5); padding:var(--sp-5);
+    border:var(--bw) solid var(--border); border-radius:var(--r-md);
+    background:var(--surface-card) }
+  .pasos__tit { font-family:var(--font-display); font-size:1.1rem;
+    color:var(--lp-espresso); margin:0 0 var(--sp-3) }
+  .pasos ol { margin:0 0 var(--sp-4); padding-left:1.15rem; color:var(--text-body);
+    line-height:1.7; font-size:.92rem }
+  .pasos li + li { margin-top:6px }
+  .pasos__acciones { display:flex; flex-wrap:wrap; gap:var(--sp-3); align-items:center }
+  .pasos__nota { color:var(--text-muted); font-size:.82rem; margin:var(--sp-3) 0 0 }
+  .rechazo { margin:0 0 var(--sp-4); padding:var(--sp-3) var(--sp-4);
+    background:#F5EAE8; color:#8E3226; border-radius:var(--r-sm); font-size:.88rem }
+
+  /* Al imprimir o guardar como PDF sobran el nav, el pie y los botones:
+     lo que se lleva a la puerta es el ticket. */
+  @media print {
+    .header, .footer, .pasos, .ins__volver, .estado { display:none !important }
+    .ticket { box-shadow:none; border-color:#000 }
+  }
+  .agendar { margin-top: var(--sp-5); text-align: center; }
+  .agendar__tit { margin: 0 0 var(--sp-3); font-weight: var(--fw-bold); color: var(--text-strong); }
+  .agendar__botones { display: flex; flex-wrap: wrap; gap: var(--sp-2); justify-content: center; }
+  .agendar__botones .btn { display: inline-flex; align-items: center; gap: 8px; }
+</style>
+{% endblock %}
+
+{% block contenido %}
+<main class="section"><div class="container ins">
+
+  <a class="ins__volver" href="{{ url_for('actividad', slug=i.slug) }}">← Volver al evento</a>
+
+  {# El estado, en palabras. 'por_revisar' o 'pendiente' no le dicen nada a
+     nadie: el texto vive en TEXTO_ESTADO, en el controlador. #}
+  <div class="estado {% if i.activo %}estado--ok{% elif i.esperando_formulario %}estado--espera{% elif i.en_revision %}estado--revision{% else %}estado--frio{% endif %}">
+    <p class="estado__tit">{{ i.titulo_estado }}</p>
+    <p class="estado__txt">{{ i.detalle_estado }}</p>
+  </div>
+
+  <div class="ticket {% if i.activo %}ticket--activo{% elif i.usado or i.cerrada %}ticket--usado{% endif %}">
+
+    {% if i.imagen_url %}
+    {# El afiche entero, sin recortar: trae la fecha y la hora dibujadas. #}
+    <img class="ticket__afiche" src="{{ i.imagen_url }}" alt="Afiche de {{ i.actividad }}" />
+    {% endif %}
+
+    <div class="ticket__cuerpo">
+      <div class="ticket__marca">{{ negocio.nombre }}</div>
+      <h1 class="ticket__nombre">{{ i.actividad }}</h1>
+
+      <div class="ticket__datos">
+        <div class="fila"><span class="fila__et">Cuándo</span>
+          <span class="fila__v">{{ i.cuando }}</span></div>
+        {% if i.lugar %}
+        <div class="fila"><span class="fila__et">Dónde</span>
+          <span class="fila__v">{{ i.lugar }}</span></div>
+        {% endif %}
+        <div class="fila"><span class="fila__et">Nombre</span>
+          <span class="fila__v">{{ i.persona }}</span></div>
+        <div class="fila"><span class="fila__et">Valor</span>
+          <span class="fila__v">{{ i.precio_fmt }}</span></div>
+      </div>
+    </div>
+
+    {% if i.activo or i.usado %}
+    <div class="ticket__corte"></div>
+    <div class="ticket__pie">
+      <p class="codigo__et">Tu código</p>
+      <p class="codigo">{{ i.voucher_codigo }}</p>
+      {% if i.qr %}
+      <div class="qr">{{ i.qr|safe }}</div>
+      {% endif %}
+      {% if i.usado %}
+      <span class="sello">Ya usado</span>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  {# Agendarlo: Google Calendar con un toque, y el .ics para el calendario
+     del iPhone u Outlook. Solo con el voucher activo y el taller por venir. #}
+  {% if i.calendario %}
+  <div class="agendar">
+    <p class="agendar__tit">Agrégalo a tu calendario</p>
+    <div class="agendar__botones">
+      <a class="btn btn--primary" href="{{ url_for('inscripcion_calendario', codigo=i.voucher_codigo) }}"
+         target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18M12 14v4M10 16h4"/></svg>
+        Google Calendar
+      </a>
+      <a class="btn btn--outline" href="{{ url_for('inscripcion_calendario_ics', codigo=i.voucher_codigo) }}">
+        iPhone u Outlook
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ----------------------------------------------------------------------
+     Lo que falta. Solo aparece mientras haya algo que hacer: con el voucher
+     activo, la página es el voucher y nada más.
+     ---------------------------------------------------------------------- #}
+  {% if i.esperando_formulario %}
+  <div class="pasos">
+    <h2 class="pasos__tit">Para confirmar tu cupo</h2>
+
+    {% if i.nota_admin %}
+    <p class="rechazo"><b>Revisamos tu comprobante:</b> {{ i.nota_admin }}</p>
+    {% endif %}
+
+    <ol>
+      <li>Transfiere el valor del curso con los datos que están en el formulario.</li>
+      <li>Completa el formulario y adjunta ahí tu comprobante.</li>
+      <li>Vuelve acá y avísanos, para que no se te venza el cupo.</li>
+    </ol>
+
+    <div class="pasos__acciones">
+      {% if i.formulario_url %}
+      {# rel="noopener": la pestaña que se abre no puede tocar esta. #}
+      <a class="btn btn--primary" href="{{ i.formulario_url }}"
+         target="_blank" rel="noopener noreferrer">Ir al formulario</a>
+      {% endif %}
+      <form method="POST" action="{{ url_for('inscripcion_aviso', codigo=i.voucher_codigo) }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+        <button class="btn btn--outline" type="submit">Ya envié el formulario</button>
+      </form>
+    </div>
+
+    {% if i.vence %}
+    <p class="pasos__nota">
+      Tu cupo está reservado hasta el <b>{{ i.vence }}</b>. Si avisas antes,
+      queda guardado mientras revisamos el comprobante.
+    </p>
+    {% endif %}
+    {% if not i.formulario_url %}
+    <p class="pasos__nota">
+      Todavía no publicamos el formulario de este evento. Escríbenos y lo
+      coordinamos contigo.
+    </p>
+    {% endif %}
+  </div>
+
+  {% elif i.en_revision %}
+  <div class="pasos">
+    <h2 class="pasos__tit">Estamos revisando tu comprobante</h2>
+    <p style="margin:0;color:var(--text-body);font-size:.92rem;line-height:1.6">
+      Tu cupo está guardado y ya no vence. Cuando confirmemos el pago, este
+      mismo enlace se convierte en tu voucher y te llega un correo.
+    </p>
+  </div>
+
+  {% elif i.cerrada %}
+  <div class="pasos">
+    <h2 class="pasos__tit">¿Quieres volver a inscribirte?</h2>
+    <p style="margin:0 0 var(--sp-4);color:var(--text-body);font-size:.92rem">
+      Si todavía quedan cupos, puedes tomar uno de nuevo desde la página del evento.
+    </p>
+    <a class="btn btn--outline" href="{{ url_for('actividad', slug=i.slug) }}">Ver el evento</a>
+  </div>
+  {% endif %}
+
+  <p class="pasos__nota" style="text-align:center;margin-top:var(--sp-5)">
+    Guarda este enlace: es tu inscripción.
+  </p>
+
+</div></main>
+{% endblock %}

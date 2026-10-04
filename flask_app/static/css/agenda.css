@@ -1,0 +1,155 @@
+/* ===========================================================================
+   Plantilla Cafetería — Agenda de talleres y catas (.agenda / .evento)
+   ---------------------------------------------------------------------------
+   Lo comparten la pagina /actividades y la seccion #talleres de la landing.
+   Antes vivia en el <style> de actividades.html; se extrajo al aparecer el
+   segundo lugar que lo necesita, para no terminar con dos copias que se
+   separan sin que nadie se de cuenta.
+   =========================================================================== */
+
+.agenda { display: grid; gap: var(--sp-4); }
+
+@media (min-width: 820px) {
+  .agenda { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* En la portada una tarjeta sola no necesita ocupar todo el container: el
+   limite elimina el espacio muerto despues de los datos. La agenda completa
+   conserva su grilla independiente. */
+.agenda--landing {
+  width: 100%;
+  max-width: 520px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Dos columnas como máximo dejan espacio suficiente para que el afiche sea
+   legible. Al haber varias actividades, la portada vuelve a aprovechar el
+   ancho disponible en pantallas grandes. */
+@media (min-width: 1080px) {
+  .agenda--landing {
+    max-width: calc(1040px + var(--sp-4));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.evento {
+  display: flex;
+  gap: var(--sp-4);
+  padding: var(--sp-5);
+  background: var(--surface-card);
+  border: var(--bw) solid var(--border);
+  border-radius: var(--r-md);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+
+.evento:hover { border-color: var(--lp-forest); transform: translateY(-2px); }
+
+/* Afiche a la izquierda y toda la informacion a la derecha. La fecha abre la
+   columna como una franja: se reconoce de inmediato sin competir con el
+   titulo, y una actividad sin imagen sigue ocupando todo el ancho. */
+.evento__contenido {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-width: 0;
+  flex: 1;
+  align-items: stretch;
+}
+
+/* La fecha queda sobre el nombre, pero abraza su contenido: extender el verde
+   hasta el borde dejaba una franja casi vacia en actividades de nombre corto. */
+.evento__fecha {
+  flex: none;
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  width: fit-content;
+  max-width: 100%;
+  padding: 9px 14px;
+  background: var(--lp-forest);
+  color: var(--text-on-dark);
+  border-radius: var(--r-sm);
+  text-align: left;
+  align-self: flex-start;
+}
+
+.evento__dia { font-size: 1.5rem; font-weight: var(--fw-bold); line-height: 1; }
+.evento__mes { font-size: .72rem; letter-spacing: .14em; }
+
+.evento__cuerpo { width: 100%; min-width: 0; }
+
+.evento__nombre {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  color: var(--lp-espresso);
+  margin: 0 0 4px;
+}
+
+.evento__dato { color: var(--text-muted); font-size: .85rem; margin: 0 0 2px; }
+
+.evento__pie {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  align-items: center;
+  margin-top: var(--sp-3);
+}
+
+.pastilla {
+  font-size: .72rem;
+  font-weight: var(--fw-bold);
+  padding: 4px 11px;
+  border-radius: var(--r-pill);
+  letter-spacing: .02em;
+}
+
+.pastilla--libre   { background: var(--lp-gold-bg); color: #9B0D23; }
+.pastilla--pocos   { background: #FBE6D4; color: #9C4A16; }
+.pastilla--agotada { background: #F0E4E2; color: #A33A2E; }
+.pastilla--precio  { background: var(--surface-sand); color: var(--lp-coffee-700); }
+
+.sin-nada {
+  text-align: center;
+  padding: var(--sp-7) var(--sp-4);
+  border: var(--bw) dashed var(--border-strong);
+  border-radius: var(--r-md);
+  color: var(--text-muted);
+}
+
+/* El reset del design system pone img { display: block }, asi que el
+   text-align: center del padre no la centra: hace falta el margin auto.
+   (Venia descuadrada tambien en /actividades; se arregla en las dos.) */
+.sin-nada img { width: 90px; height: auto; margin: 0 auto var(--sp-3); }
+
+.agenda__pie { margin-top: var(--sp-5); }
+.agenda[hidden], .sin-nada[hidden], .agenda__pie[hidden] { display: none; }
+
+/* --- El afiche --------------------------------------------------------------
+   En la TARJETA va entero y a un tamaño legible, al lado izquierdo. La versión
+   anterior medía 72px y recortaba la imagen: no permitía reconocer el afiche.
+
+   En la FICHA también va entero, con su proporcion natural — pero ese estilo vive en
+   el <style> de actividad.html junto al resto de los .ficha__*, porque esa
+   pagina no carga este archivo. */
+
+.evento__afiche {
+  flex: none;
+  width: 150px;
+  height: auto;
+  max-height: 220px;
+  object-fit: contain;
+  border-radius: var(--r-sm);
+  align-self: flex-start;
+  background: var(--surface-sand); /* mientras carga, y si la URL falla */
+}
+
+.evento__afiche[hidden] { display: none; }
+
+/* En celular el afiche conserva protagonismo y la franja sigue ocupando todo
+   el ancho disponible de la columna de informacion. */
+@media (max-width: 560px) {
+  .evento { gap: var(--sp-3); padding: var(--sp-4); }
+  .evento__afiche { width: min(40%, 130px); max-height: 190px; }
+}

@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block title %}Muro de la comunidad · Administración{% endblock %}
+{% block descripcion %}Moderación del muro de la comunidad.{% endblock %}
+
+{% block head_extra %}
+<style>
+  /* Mismo lenguaje visual que admin_actividades.html. Sigue viviendo en un
+     <style> por lo mismo que aquel: es CSS de una sola pantalla y de admin.
+     Si aparece una tercera pantalla de administración con estas filas, esto
+     se extrae a un admin.css, igual que se hizo con agenda.css. */
+  .adm__cab { display:flex; flex-wrap:wrap; gap:var(--sp-3); align-items:baseline;
+    justify-content:space-between; margin-bottom:var(--sp-5) }
+  .adm__resumen { color:var(--text-muted); font-size:.9rem }
+
+  .tabs { display:flex; flex-wrap:wrap; gap:var(--sp-2); margin-bottom:var(--sp-5) }
+  .tabs__link { text-decoration:none; font-size:.82rem; font-weight:var(--fw-bold);
+    padding:7px 14px; border-radius:var(--r-pill); color:var(--text-muted);
+    background:var(--surface-sand); border:var(--bw) solid transparent }
+  .tabs__link--on { background:var(--lp-forest); color:var(--text-on-dark) }
+  .tabs__n { opacity:.75; font-weight:var(--fw-semibold) }
+
+  .fila { display:grid; gap:var(--sp-3); padding:var(--sp-4);
+    border:var(--bw) solid var(--border); border-radius:var(--r-md);
+    background:var(--surface-card); margin-bottom:var(--sp-3) }
+  .fila--pendiente { border-style:dashed }
+  .fila--rechazado { opacity:.62 }
+
+  .fila__texto { margin:0; font-size:1rem; line-height:1.6;
+    color:var(--lp-coffee-700); overflow-wrap:anywhere }
+  .fila__meta { display:flex; flex-wrap:wrap; gap:var(--sp-3); align-items:center;
+    font-size:.8rem; color:var(--text-muted) }
+  .fila__quien { font-family:var(--font-display); font-size:1.05rem;
+    color:var(--lp-espresso) }
+
+  .marca-estado { display:inline-flex; align-items:center; gap:7px; font-size:.75rem;
+    font-weight:var(--fw-bold); padding:4px 11px; border-radius:var(--r-pill);
+    letter-spacing:.02em }
+  .marca-estado--pendiente { background:var(--lp-gold-bg); color:#9B0D23 }
+  .marca-estado--aprobado  { background:#E7F0E9; color:#1D4A31 }
+  .marca-estado--rechazado { background:#F5EAE8; color:#8E3226 }
+
+  /* Señales sobre la cuenta que escribió. No deciden nada solas, pero un
+     mensaje raro de una cuenta con correo sin confirmar creada hace diez
+     minutos se lee distinto que el mismo mensaje de alguien de marzo. */
+  .marca-cuenta { font-size:.72rem; font-weight:var(--fw-bold); padding:3px 9px;
+    border-radius:var(--r-pill); letter-spacing:.02em }
+  .marca-cuenta--sin-verificar { background:#FBE6D4; color:#9C4A16 }
+  .marca-cuenta--bloqueado { background:#F5EAE8; color:#8E3226 }
+
+  .fila__acciones { display:flex; flex-wrap:wrap; gap:var(--sp-3); align-items:center }
+  .fila__acciones form { display:flex; gap:var(--sp-2); align-items:center; margin:0 }
+  .motivo { font:inherit; font-size:.85rem; padding:8px 11px; border-radius:var(--r-sm);
+    border:var(--bw) solid var(--border-strong); background:var(--surface-page);
+    color:var(--text-body); min-width:170px }
+  .motivo:focus { outline:2px solid var(--accent); outline-offset:1px }
+  .fila__motivo { font-size:.8rem; color:var(--text-muted); font-style:italic }
+
+  .peligro { color:#A33A2E; background:none; border:none; cursor:pointer;
+    font:inherit; font-size:.82rem; text-decoration:underline; padding:0 }
+  .vacio { text-align:center; padding:var(--sp-7) var(--sp-4);
+    border:var(--bw) dashed var(--border-strong); border-radius:var(--r-md);
+    color:var(--text-muted) }
+</style>
+{% endblock %}
+
+{% block contenido %}
+<main class="section"><div class="container" style="max-width:900px">
+  <div class="adm__cab">
+    <div>
+      <div class="auth__eyebrow">Administración</div>
+      <h1 style="margin:6px 0 0">Muro de la comunidad</h1>
+    </div>
+    <p class="adm__resumen">
+      {{ conteo.pendiente }} esperando · {{ conteo.aprobado }} publicado{{ 's' if conteo.aprobado != 1 }}
+    </p>
+  </div>
+
+  <p style="color:var(--text-muted);font-size:.88rem;margin:0 0 var(--sp-5);max-width:62ch">
+    Nada aparece en el sitio hasta que lo apruebas acá. Lo rechazado no se
+    borra: queda guardado para que sepas qué pasó si alguien reclama.
+  </p>
+
+  <nav class="tabs">
+    {% for clave, etiqueta in [('pendiente', 'Esperando'), ('aprobado', 'Publicados'),
+                               ('rechazado', 'Rechazados'), ('todos', 'Todos')] %}
+    <a class="tabs__link {{ 'tabs__link--on' if estado == clave }}"
+       href="{{ url_for('admin_muro', estado=clave) }}">
+      {{ etiqueta }}
+      <span class="tabs__n">{{ conteo.total if clave == 'todos' else conteo[clave] }}</span>
+    </a>
+    {% endfor %}
+  </nav>
+
+  {% if mensajes %}
+    {% for m in mensajes %}
+    <article class="fila fila--{{ m.estado }}">
+      <p class="fila__texto">{{ m.mensaje }}</p>
+
+      <div class="fila__meta">
+        <span class="fila__quien">{{ m.nickname }}</span>
+        <span>{{ m.email }}</span>
+        <span>{{ m.cuando }}</span>
+        {% if not m.email_verificado_at %}
+        <span class="marca-cuenta marca-cuenta--sin-verificar">Correo sin confirmar</span>
+        {% endif %}
+        {% if m.estado_usuario == 'bloqueado' %}
+        <span class="marca-cuenta marca-cuenta--bloqueado">Cuenta bloqueada</span>
+        {% endif %}
+        {% if estado == 'todos' %}
+        <span class="marca-estado marca-estado--{{ m.estado }}">{{ m.estado }}</span>
+        {% endif %}
+      </div>
+
+      {% if m.motivo %}
+      <p class="fila__motivo">Nota: {{ m.motivo }}</p>
+      {% endif %}
+
+      <div class="fila__acciones">
+        {#
+          Un formulario por acción, con su propio token. Se podría hacer con
+          fetch y sin recargar, como el toggle de la carta, pero moderar es
+          leer y decidir de a uno: recargar acá no molesta y deja la pantalla
+          funcionando sin JavaScript.
+        #}
+        {% if m.estado != 'aprobado' %}
+        <form method="POST" action="{{ url_for('admin_muro_estado', mensaje_id=m.id) }}">
+          <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+          <input type="hidden" name="estado" value="aprobado" />
+          <input type="hidden" name="volver_estado" value="{{ estado }}" />
+          <button class="btn btn--primary btn--sm" type="submit">Publicar</button>
+        </form>
+        {% endif %}
+
+        {% if m.estado != 'rechazado' %}
+        <form method="POST" action="{{ url_for('admin_muro_estado', mensaje_id=m.id) }}">
+          <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+          <input type="hidden" name="estado" value="rechazado" />
+          <input type="hidden" name="volver_estado" value="{{ estado }}" />
+          <input class="motivo" name="motivo" type="text" maxlength="{{ largo_motivo }}"
+                 placeholder="Por qué (solo lo ves tú)" value="{{ m.motivo or '' }}" />
+          <button class="btn btn--outline btn--sm" type="submit">
+            {{ 'Bajar del muro' if m.estado == 'aprobado' else 'Rechazar' }}
+          </button>
+        </form>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('admin_muro_eliminar', mensaje_id=m.id) }}"
+              onsubmit="return confirm('Se borra para siempre. ¿Seguro?')">
+          <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+          <input type="hidden" name="volver_estado" value="{{ estado }}" />
+          <button class="peligro" type="submit">Eliminar</button>
+        </form>
+      </div>
+
+      {% if m.revisado_at %}
+      <p style="margin:0;font-size:.75rem;color:var(--text-muted)">
+        Revisado por {{ m.revisor_nickname or m.revisor_nombre or 'alguien' }}
+      </p>
+      {% endif %}
+    </article>
+    {% endfor %}
+
+  {% else %}
+  <div class="vacio">
+    {% if estado == 'pendiente' %}
+    <p style="margin:0"><b>No hay nada esperando.</b> Todo revisado.</p>
+    {% else %}
+    <p style="margin:0">Nada por acá todavía.</p>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <p style="margin-top:var(--sp-6)">
+    <a class="btn btn--outline btn--sm" href="{{ url_for('admin_inicio') }}">
+      &larr; Volver al panel
+    </a>
+  </p>
+</div></main>
+{% endblock %}

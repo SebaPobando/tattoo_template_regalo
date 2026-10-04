@@ -1,0 +1,74 @@
+{#
+  _muro-form.html — el formulario para dejar un deseo.
+
+  UNO SOLO para la seccion #muro de la landing y para la pagina /muro. Es el
+  mismo trato que _nav.html: la version duplicada de este formulario se iba a
+  separar a la primera vez que cambiara el largo maximo o el texto de ayuda.
+
+  Espera en el contexto:
+    volver          'landing' o 'muro'. Adonde vuelve el POST. NUNCA una URL:
+                    el controlador solo acepta estas dos palabras, para que
+                    nadie convierta el formulario en un redirect abierto.
+    largo_mensaje   El maximo de caracteres del mensaje (LARGO_MENSAJE).
+    usuario         El dict de session["usuario"], o nada si es visitante.
+
+  Los tres largos vienen del modelo y bajan hasta el maxlength del campo, y
+  de ahi los lee muro.js para el contador. El numero vive en un solo lugar.
+#}
+
+{#
+  Cuenta sin nombre para mostrar. Desde 2026-09-11 el registro lo exige, pero
+  las cuentas de antes —y los invitados que se inscribieron a un taller sin
+  crear cuenta— no tienen. Se les pide ponerlo en vez de firmarlas con su
+  nombre real sin que se enteren.
+#}
+{% if usuario and not usuario.nickname %}
+<div class="muro-form muro-form--invitado">
+  <p>Ponle un nombre para mostrar a tu cuenta y podrás dejar tu mensaje.</p>
+  <a class="btn btn--primary" href="{{ url_for('perfil') }}">Elegir mi nombre</a>
+</div>
+
+{% elif usuario %}
+<form class="muro-form" method="POST" action="{{ url_for('muro_enviar') }}">
+  <input type="hidden" name="csrf" value="{{ csrf_actual() }}" />
+  <input type="hidden" name="volver" value="{{ volver|default('landing') }}" />
+
+  <div class="muro-form__fila muro-form__fila--solo-mensaje">
+    <div class="muro-form__campo">
+      <label class="muro-form__label" for="muroMensaje">Tu mensaje</label>
+      <textarea class="muro-form__area" id="muroMensaje" name="mensaje"
+                maxlength="{{ largo_mensaje }}" required
+                data-muro-mensaje
+                placeholder="Que el flat white de los lunes nunca falte..."></textarea>
+    </div>
+  </div>
+
+  <div class="muro-form__pie">
+    {#
+      Con qué nombre se firma NO se elige acá: es el nombre para mostrar de la
+      cuenta (decisión de Seba). Se enseña igual, y antes de enviar, para que
+      nadie se lleve la sorpresa de ver publicado un nombre que no esperaba.
+
+      El servidor lo lee de la base, no de esta página: si alguien manda un
+      campo `nickname` a mano, se ignora.
+    #}
+    <span class="muro-form__firma">
+      Firmas como <b>{{ usuario.nickname or usuario.etiqueta }}</b> ·
+      <a href="{{ url_for('perfil') }}">cambiar</a>
+    </span>
+    <button class="btn btn--primary" type="submit">Publicar mi mensaje</button>
+    <span class="muro-form__contador" data-muro-contador></span>
+  </div>
+
+  <p class="muro-form__nota">
+    Lo revisamos antes de publicarlo, así que puede tardar un poco en aparecer.
+  </p>
+</form>
+
+{% else %}
+<div class="muro-form muro-form--invitado">
+  <p>Entra a tu cuenta para dejar tu mensaje en el muro.</p>
+  <a class="btn btn--primary" href="{{ url_for('login') }}">Entrar</a>
+  <a class="btn btn--outline" href="{{ url_for('registro') }}">Crear cuenta</a>
+</div>
+{% endif %}

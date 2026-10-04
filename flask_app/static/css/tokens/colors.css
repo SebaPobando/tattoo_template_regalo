@@ -1,0 +1,75 @@
+/* ===========================================================================
+   Plantilla Tienda de Tatuaje — Color tokens
+   Papel y tinta: superficies claras de papel de transfer, grises de tinta
+   negra y un rojo para los puntos y lo destacado.
+
+   Los nombres de las variables (--lp-cream, --lp-coffee, --lp-gold...)
+   vienen de la plantilla de cafetería de la que nace esta y se conservan para
+   no tocar cientos de reglas: lo que cambió es el VALOR. Los colores de la
+   marca (botones, fondo, texto, puntos) se pisan desde
+   flask_app/config/negocio.py, sin editar este archivo.
+   =========================================================================== */
+:root {
+  /* --- Papel / superficies (claras, limpias) --- */
+  --lp-cream-50:  #FBFAF8;
+  --lp-cream-100: #F3F1ED;
+  --lp-cream-200: #E9E6E1;
+  --lp-cream-300: #D9D5CE;
+
+  /* --- Grises de tinta --- */
+  --lp-espresso:  #161616;
+  --lp-coffee-700:#2B2B2B;
+  --lp-coffee-600:#3D3D3D;
+  --lp-coffee-500:#4F4F4F;
+  --lp-coffee-400:#6B6B6B;
+  --lp-caramel:   #8C8C8C;
+  --lp-latte:     #B5B5B5;
+
+  /* --- Acento (tinta negra) --- */
+  --lp-forest-900:#0B0B0B;
+  --lp-forest:    #161616;
+  --lp-forest-600:#3A3A3A;
+  --lp-forest-300:#9A9A9A;
+
+  /* --- Tinta (negro) --- */
+  --lp-ink:       #0B0B0B;
+  --lp-ink-soft:  #262626;
+
+  /* --- Rojo de los puntos y lo destacado --- */
+  --lp-gold:      #C8102E;
+  --lp-gold-soft: #F08A98;
+  --lp-gold-bg:   #FBE3E6;
+
+  /* --- Utility --- */
+  --lp-white:     #FFFFFF;
+  --lp-success:   #3C7A4E;
+  --lp-danger:    #B23B2E;
+  --lp-line:      rgba(22, 22, 22, 0.12);   /* línea fina sobre papel */
+  --lp-line-soft: rgba(22, 22, 22, 0.07);
+
+  /* =========================================================================
+     Semantic aliases — reference these in components
+     ========================================================================= */
+  --surface-page:    var(--lp-cream-100);
+  --surface-raised:  var(--lp-cream-50);
+  --surface-card:    var(--lp-white);
+  --surface-sand:    var(--lp-cream-200);
+  --surface-dark:    var(--lp-espresso);
+  --surface-forest:  var(--lp-forest);
+
+  --text-strong:     var(--lp-espresso);
+  --text-body:       var(--lp-coffee-700);
+  --text-muted:      var(--lp-coffee-400);
+  --text-on-dark:    var(--lp-cream-50);
+  --text-on-dark-mut:rgba(252, 248, 241, 0.66);
+
+  --accent:          var(--lp-forest);
+  --accent-hover:    var(--lp-forest-600);
+  --accent-ink:      var(--lp-ink);
+  --points:          var(--lp-gold);
+  --points-bg:       var(--lp-gold-bg);
+
+  --border:          var(--lp-line);
+  --border-strong:   rgba(22, 22, 22, 0.22);
+  --divider:         var(--lp-line-soft);
+}

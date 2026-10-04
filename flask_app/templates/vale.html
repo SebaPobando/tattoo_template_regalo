@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}{{ v.nombre_tipo }} · {{ negocio.nombre }}{% endblock %}
+{% block descripcion %}{{ v.nombre_tipo }} de {{ negocio.nombre }}.{% endblock %}
+
+{% block head_extra %}
+<style>
+  /* =====================================================================
+     La página de UN vale. La ve quien lo recibió (para mostrarlo en la
+     barra) y la ve el barista al escanear el QR de esa pantalla: a él, y
+     solo a él, le aparece el botón para canjearlo.
+     ===================================================================== */
+  .vale { max-width: 480px; }
+
+  .recien { margin-bottom: var(--sp-5); padding: var(--sp-4) var(--sp-5); border-radius: var(--r-md);
+    background: #E7F0E9; color: #1D4A31; }
+  .recien__tit { font-weight: var(--fw-bold); margin: 0 0 4px; }
+  .recien__txt { margin: 0 0 var(--sp-3); font-size: .9rem; }
+  .recien__acciones { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+
+  .tarjeta { position: relative; border-radius: var(--r-lg); overflow: hidden;
+    background: var(--surface-card); border: var(--bw) solid var(--border); box-shadow: var(--shadow-md); }
+  .tarjeta__cab { padding: var(--sp-5); background: var(--lp-espresso); color: var(--lp-cream-50); }
+  .tarjeta--giftcard .tarjeta__cab { background: var(--lp-forest); }
+  .tarjeta__tipo { font-size: .7rem; letter-spacing: .18em; text-transform: uppercase; font-weight: var(--fw-bold);
+    opacity: .8; margin: 0; }
+  .tarjeta__negocio { font-family: var(--font-display); font-size: 1.5rem; line-height: 1.05; margin: 6px 0 0; }
+  .tarjeta__cuerpo { padding: var(--sp-5); text-align: center; }
+  .tarjeta__et { font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; color: var(--text-muted);
+    font-weight: var(--fw-bold); margin: 0; }
+  .tarjeta__que { font-family: var(--font-body); font-weight: 800; font-size: clamp(1.3rem, 6vw, 1.8rem);
+    line-height: 1.15; color: var(--lp-espresso); margin: 6px 0 var(--sp-4); overflow-wrap: anywhere; }
+  .tarjeta__para { margin: 0 0 var(--sp-2); color: var(--lp-espresso); }
+  .tarjeta__qr { width: 210px; max-width: 70%; margin: var(--sp-4) auto var(--sp-2); }
+  .tarjeta__qr svg { display: block; width: 100%; height: auto; }
+  .tarjeta__qr path { fill: var(--lp-espresso); }
+  .tarjeta__codigo { font-size: .8rem; letter-spacing: .14em; color: var(--text-muted); font-weight: var(--fw-bold); margin: 0; }
+  .tarjeta__vence { margin: var(--sp-3) 0 0; font-size: .85rem; color: var(--text-muted); }
+
+  /* El sello cruzado de un vale que ya no sirve. */
+  .tarjeta--usado .tarjeta__qr { opacity: .18; }
+  .sello { position: absolute; left: 50%; top: 58%; transform: translate(-50%, -50%) rotate(-12deg);
+    padding: 8px 20px; border: 4px solid currentColor; border-radius: var(--r-md); font-size: 1.5rem;
+    font-weight: 800; letter-spacing: .12em; text-transform: uppercase; background: rgba(255,255,255,.88);
+    white-space: nowrap; }
+  .sello--canjeado { color: #1D4A31; }
+  .sello--vencido, .sello--anulado { color: #8A2E22; }
+
+  .estado { margin-top: var(--sp-4); padding: var(--sp-3) var(--sp-4); border-radius: var(--r-md);
+    font-size: .9rem; background: var(--surface-sand); color: var(--lp-coffee-600); text-align: center; }
+
+  /* --- Lo que ve el personal ------------------------------------------ */
+  .barra { margin-top: var(--sp-5); padding: var(--sp-5); border-radius: var(--r-md);
+    border: var(--bw-strong) dashed var(--border-strong); background: var(--surface-page); }
+  .barra__et { font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; font-weight: var(--fw-bold);
+    color: var(--text-muted); margin: 0 0 var(--sp-3); }
+  .barra__canjear { width: 100%; font-size: 1.1rem; padding: 18px; }
+  .barra__datos { margin: var(--sp-4) 0 0; font-size: .82rem; color: var(--text-muted); line-height: 1.6; }
+  .barra__otros { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-3); }
+  .barra__otros form { margin: 0; }
+  .lnk { background: none; border: 0; padding: 6px 4px; font: inherit; font-size: .82rem;
+    color: var(--text-muted); text-decoration: underline; cursor: pointer; }
+</style>
+{% endblock %}
+
+{% block contenido %}
+<main class="section"><div class="container vale">
+
+  {% if recien and es_personal %}
+  <div class="recien">
+    <p class="recien__tit">{{ v.nombre_tipo }} emitido</p>
+    <p class="recien__txt">Mándaselo a {{ v.para_nombre or 'quien lo recibe' }}: le llega el enlace a esta página, con el QR.</p>
+    <div class="recien__acciones">
+      <a class="btn btn--primary btn--sm" href="{{ v.wsp }}" target="_blank" rel="noopener noreferrer">Enviar por WhatsApp</a>
+      <a class="btn btn--outline btn--sm" href="{{ url_for('admin_vales') }}">Volver a vales</a>
+    </div>
+  </div>
+  {% endif %}
+
+  {% set usado = v.estado != 'vigente' %}
+  <article class="tarjeta tarjeta--{{ v.tipo }}{{ ' tarjeta--usado' if usado }}">
+    <header class="tarjeta__cab">
+      <p class="tarjeta__tipo">{{ v.nombre_tipo }}</p>
+      <p class="tarjeta__negocio">{{ negocio.nombre }}</p>
+    </header>
+    <div class="tarjeta__cuerpo">
+      <p class="tarjeta__et">Vale por</p>
+      <p class="tarjeta__que">{{ v.valido_por }}</p>
+      {% if v.para_nombre %}<p class="tarjeta__para">Para <b>{{ v.para_nombre }}</b></p>{% endif %}
+      {% if qr_svg %}<div class="tarjeta__qr" aria-hidden="true">{{ qr_svg | safe }}</div>{% endif %}
+      <p class="tarjeta__codigo">{{ v.codigo }}</p>
+      <p class="tarjeta__vence">
+        {% if v.tipo == 'giftcard' %}No vence.
+        {% elif v.vence_txt %}Válido hasta el {{ v.vence_txt }}.
+        {% else %}No vence.{% endif %}
+      </p>
+    </div>
+    {% if usado %}<span class="sello sello--{{ v.estado }}">{{ v.estado }}</span>{% endif %}
+  </article>
+
+  {% if v.estado == 'vigente' %}
+  <p class="estado">Muestra este QR en el mesón para canjearlo.</p>
+  {% elif v.estado == 'canjeado' %}
+  <p class="estado">Este vale se canjeó el {{ v.canjeado_txt }}.</p>
+  {% elif v.estado == 'vencido' %}
+  <p class="estado">Este vale venció el {{ v.vence_txt }}.</p>
+  {% else %}
+  <p class="estado">Este vale fue anulado.</p>
+  {% endif %}
+
+  {% if es_personal %}
+  {# Solo el personal llega a ver esto: es lo que hace que escanear el QR
+     desde el celular de la barra sirva para canjear, y desde cualquier otro
+     no. #}
+  <section class="barra" aria-label="Para el personal">
+    <p class="barra__et">Para el mesón</p>
+    {% if v.estado == 'vigente' %}
+    <form method="POST" action="{{ url_for('vale_canjear', codigo=v.codigo) }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+      <button class="btn btn--primary barra__canjear" type="submit">Canjear vale</button>
+    </form>
+    {% endif %}
+    <p class="barra__datos">
+      Emitido {{ v.emitido_txt }}{% if v.emitido_quien %} por {{ v.emitido_quien }}{% endif %}.
+      {% if v.tipo == 'giftcard' %}Comprada{% if v.comprador %} por {{ v.comprador }}{% endif %} en ${{ v.monto_pagado_clp | miles }}.{% endif %}
+      {% if v.motivo %}Motivo: {{ v.motivo }}.{% endif %}
+      {% if v.canjeado_quien %}Canjeado por {{ v.canjeado_quien }}.{% endif %}
+    </p>
+    <div class="barra__otros">
+      {% if v.estado == 'vigente' %}
+      <a class="lnk" href="{{ v.wsp }}" target="_blank" rel="noopener noreferrer">Enviar por WhatsApp</a>
+      {% endif %}
+      {% if es_admin and v.estado == 'vigente' %}
+      <form method="POST" action="{{ url_for('admin_vales_anular', vale_id=v.id) }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+        <button class="lnk" type="submit">Anular vale</button>
+      </form>
+      {% endif %}
+      {% if es_admin and v.estado == 'canjeado' %}
+      <form method="POST" action="{{ url_for('admin_vales_revertir', vale_id=v.id) }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+        <button class="lnk" type="submit">Revertir canje (fue un error)</button>
+      </form>
+      {% endif %}
+      <a class="lnk" href="{{ url_for('admin_vales') }}">Todos los vales</a>
+    </div>
+  </section>
+  {% endif %}
+</div></main>
+{% endblock %}

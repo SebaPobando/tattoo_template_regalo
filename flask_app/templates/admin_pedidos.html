@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}Pedidos de la tienda · {{ negocio.nombre }}{% endblock %}
+{% block descripcion %}Pedidos confirmados en la tienda online.{% endblock %}
+
+{% block head_extra %}
+<style>
+  .pedidos { display: grid; gap: var(--sp-5); margin-top: var(--sp-6); }
+  .pedidos__resumen {
+    display: flex; flex-wrap: wrap; gap: var(--sp-5);
+    background: var(--surface-card); border: var(--bw) solid var(--border);
+    border-radius: var(--r-md); padding: var(--sp-5);
+  }
+  .pedidos__dato { min-width: 140px; }
+  .pedidos__num { display: block; font-family: var(--font-display); font-size: 1.6rem; color: var(--lp-espresso); }
+  .pedidos__et { font-size: .78rem; color: var(--text-muted); }
+
+  .fila {
+    display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--sp-3);
+    justify-content: space-between;
+    padding: var(--sp-4) 0; border-bottom: var(--bw) solid var(--divider);
+  }
+  .fila:last-of-type { border-bottom: 0; }
+  .fila__quien { min-width: 0; flex: 1 1 260px; }
+  .fila__nombre { font-weight: var(--fw-bold); color: var(--lp-espresso); overflow-wrap: anywhere; }
+  .fila__correo { font-size: .82rem; color: var(--text-muted); overflow-wrap: anywhere; }
+  .fila__cuando { font-size: .76rem; color: var(--text-muted); margin-top: 2px; }
+  /* El selector de período. Son enlaces y no botones a propósito: el corte
+     viaja en la URL, así que se puede compartir o dejar marcado. */
+  .pedidos__tabs { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin: 0 0 var(--sp-5); }
+  .pedidos__tab {
+    font-family: var(--font-body); font-weight: var(--fw-semibold); font-size: .875rem;
+    padding: 7px 16px; border-radius: var(--r-pill); text-decoration: none;
+    border: var(--bw-strong) solid var(--border-strong); color: var(--lp-coffee-600);
+    white-space: nowrap;
+    transition: background var(--dur) var(--ease), color var(--dur) var(--ease),
+                border-color var(--dur) var(--ease);
+  }
+  .pedidos__tab:hover { background: var(--surface-sand); }
+  .pedidos__tab:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
+  .pedidos__tab--activa {
+    background: var(--lp-forest); color: var(--lp-cream-50); border-color: var(--lp-forest);
+  }
+
+  .pedidos__grupo {
+    display: flex; flex-wrap: wrap; align-items: baseline;
+    justify-content: space-between; gap: var(--sp-2);
+    margin: var(--sp-6) 0 var(--sp-2); padding-bottom: 6px;
+    border-bottom: var(--bw) solid var(--divider);
+  }
+  .pedidos__grupo:first-of-type { margin-top: 0; }
+  .pedidos__grupo-tit {
+    font-family: var(--font-display); font-size: 1rem; color: var(--lp-espresso);
+    margin: 0; text-transform: capitalize;
+  }
+  .pedidos__grupo-suma { font-size: .82rem; color: var(--text-muted); }
+  .pedidos__grupo-plata { font-weight: var(--fw-bold); color: var(--lp-espresso); }
+  .pedidos__nota { font-size: .76rem; color: var(--text-muted); }
+  .pedidos__mas { font-size: .78rem; color: var(--text-muted); margin: var(--sp-3) 0 0; }
+  .fila__items { font-size: .78rem; color: var(--text-muted); margin-top: 4px; }
+  .fila__monto { font-family: var(--font-display); font-size: 1.1rem; color: var(--lp-espresso); white-space: nowrap; }
+  .fila__badge {
+    display: inline-block; font-size: .68rem; font-weight: var(--fw-bold);
+    text-transform: uppercase; letter-spacing: .02em; padding: 2px 7px;
+    border-radius: 999px; margin-left: 6px; vertical-align: middle;
+    background: var(--lp-gold-bg); color: #9B0D23;
+  }
+</style>
+{% endblock %}
+
+{% block contenido %}
+<main class="section"><div class="container" style="max-width:860px">
+  <div class="auth__eyebrow">Administración</div>
+  <h1 style="margin:6px 0 0">Pedidos de la tienda</h1>
+  <p style="color:var(--text-muted);margin:var(--sp-2) 0 0;max-width:62ch">
+    Lo que Shopify confirma como pagado, con quién compró cuando tiene cuenta
+    en el sitio. Es un registro, no una billetera: <b>no suma ni descuenta
+    saldo de puntos</b> — eso todavía no existe.
+    Para ver cómo evolucionan, <a href="{{ url_for('admin_ventas') }}?periodo={{ periodo }}">mira
+    el resumen de ventas</a>.
+  </p>
+
+  <div class="pedidos">
+
+    <div class="pedidos__resumen">
+      <div class="pedidos__dato">
+        <span class="pedidos__num">{{ resumen.total }}</span>
+        <span class="pedidos__et">pedido{{ 's' if resumen.total != 1 }} confirmado{{ 's' if resumen.total != 1 }}</span>
+      </div>
+      <div class="pedidos__dato">
+        <span class="pedidos__num">${{ resumen.total_clp | miles }}</span>
+        <span class="pedidos__et">
+          vendido en total
+          {%- if resumen.reembolsados %}<br><span class="pedidos__nota">sin contar
+          {{ resumen.reembolsados }} reembolsado{{ 's' if resumen.reembolsados != 1 }}</span>{% endif %}
+        </span>
+      </div>
+    </div>
+
+    <section class="promoadm__caja" style="background:var(--surface-card);border:var(--bw) solid var(--border);border-radius:var(--r-md);padding:var(--sp-5)">
+      {% if not grupos %}
+      <p style="color:var(--text-muted);margin:0">
+        Todavía no ha llegado ningún pedido por acá. Si ya vendes por Shopify
+        y no aparece nada, revisa que el webhook esté dado de alta — ver
+        docs/TECNICO.md.
+      </p>
+      {% endif %}
+
+      {% if grupos %}
+      {% set nombres = {'dia': 'Día', 'semana': 'Semana', 'mes': 'Mes', 'anio': 'Año'} %}
+      <nav class="pedidos__tabs" aria-label="Agrupar las ventas por período">
+        {% for clave in periodos %}
+        <a class="pedidos__tab{{ ' pedidos__tab--activa' if periodo == clave }}"
+           href="{{ url_for('admin_pedidos') }}?periodo={{ clave }}"
+           {% if periodo == clave %}aria-current="page"{% endif %}>{{ nombres[clave] }}</a>
+        {% endfor %}
+      </nav>
+      {% endif %}
+
+      {% for g in grupos %}
+      <div class="pedidos__grupo">
+        <h2 class="pedidos__grupo-tit">{{ g.etiqueta }}</h2>
+        <span class="pedidos__grupo-suma">
+          {{ g.total }} pedido{{ 's' if g.total != 1 }} ·
+          <span class="pedidos__grupo-plata">${{ g.total_clp | miles }}</span>
+          {%- if g.reembolsados %} <span class="pedidos__nota">({{ g.reembolsados }}
+          reembolsado{{ 's' if g.reembolsados != 1 }}, sin contar)</span>{% endif %}
+        </span>
+      </div>
+      {% for p in g.pedidos %}
+      <div class="fila">
+        <div class="fila__quien">
+          <div class="fila__nombre">
+            {{ p.usuario_nombre or p.nombre_comprador or 'Sin nombre' }}
+            {% if not p.usuario_nombre %}<span style="color:var(--text-muted);font-weight:var(--fw-regular)"> · sin cuenta en el sitio</span>{% endif %}
+            {% if p.numero_orden %}<span style="color:var(--text-muted);font-weight:var(--fw-regular)"> · {{ p.numero_orden }}</span>{% endif %}
+            {% if p.estado == 'reembolsado' %}<span class="fila__badge">Reembolsado</span>
+            {% elif p.estado == 'reembolso_parcial' %}<span class="fila__badge">Reembolso parcial</span>{% endif %}
+          </div>
+          <div class="fila__correo">{{ p.correo_comprador }}</div>
+          <div class="fila__cuando">
+            {{ tiempo.hora(p.creado_shopify_at) if p.creado_shopify_at else tiempo.hora(p.recibido_at) }}
+          </div>
+          {% if p['items'] %}
+          <div class="fila__items">
+            {% for it in p['items'] %}{{ it.cantidad }}× {{ it.titulo }} (${{ it.clp | miles }}){% if not loop.last %}, {% endif %}{% endfor %}
+          </div>
+          {% endif %}
+        </div>
+        <div style="text-align:right">
+          <div class="fila__monto">${{ p.monto_clp | miles }}</div>
+          {% set url_shopify = url_pedido_shopify(p.shopify_order_id) %}
+          {% if url_shopify %}
+          <a href="{{ url_shopify }}" target="_blank" rel="noopener"
+             style="font-size:.76rem;color:var(--text-muted);white-space:nowrap">
+            Ver en Shopify ↗
+          </a>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+      {% if g.de_mas %}
+      <p class="pedidos__mas">
+        +{{ g.de_mas }} pedido{{ 's' if g.de_mas != 1 }} más en este período, fuera de
+        los {{ g.pedidos | length }} más recientes que se listan. La suma de arriba
+        sí los cuenta.
+      </p>
+      {% endif %}
+      {% endfor %}
+    </section>
+
+  </div>
+</div></main>
+{% endblock %}

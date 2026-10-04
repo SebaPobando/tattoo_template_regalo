@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+{% include '_pwa.html' %}
+<title>Producto · {{ negocio.nombre }}</title>
+<meta name="description" content="{{ negocio.nombre }}: elige el producto, la variante y la cantidad. Despacho o retiro en tienda." />
+<meta name="robots" content="noindex, follow" />
+<link rel="icon" type="image/jpeg" href="{{ url_for('static', filename=negocio.logo) }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+{% include '_marca.html' %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/carrito.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/cuenta-nav.css') }}" />
+<script src="{{ url_for('static', filename='js/tienda-productos.js') }}"></script>
+{% if tienda %}
+{# El catálogo de Shopify pisa al respaldo, inline y síncrono: el script de
+   más abajo lee LP_TIENDA.PRODUCTOS apenas arranca. #}
+<script>window.LP_TIENDA.cargar({{ tienda | tojson }});</script>
+{% endif %}
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: flex; flex-direction: column; background: var(--surface-page);
+         color: var(--text-body); font-family: var(--font-body); font-size: var(--fs-body); line-height: var(--lh-body); }
+  a { color: inherit; text-decoration: none; }
+  .container { max-width: var(--container); margin-inline: auto; padding-inline: var(--gutter); }
+  main { flex: 1 0 auto; }
+
+  /* ===== Header / nav (idéntico al index) ===== */
+  .header { position: sticky; top: 0; z-index: 50; border-bottom: var(--bw) solid var(--border); }
+  .header::before { content: ""; position: absolute; inset: 0; z-index: -1; background: rgba(252, 248, 241, 0.86); backdrop-filter: blur(10px); }
+  .header__inner { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); height: 68px; }
+  .header__brand { display: inline-flex; align-items: center; gap: var(--sp-2); text-decoration: none; }
+  .header__brand-logo { height: clamp(32px, 5vw, 44px); width: auto; object-fit: contain; }
+  .header__brand-name { font-family: var(--font-display); font-size: 1.5rem; color: var(--lp-espresso); line-height: 1; }
+  .header__brand-tag { font-family: var(--font-body); font-weight: var(--fw-semibold); font-size: 0.6rem; letter-spacing: 0.36em; color: var(--lp-forest); }
+  .nav { display: flex; align-items: center; gap: var(--sp-2); }
+  .nav__link { font-family: var(--font-body); font-weight: var(--fw-semibold); font-size: 0.875rem; color: var(--lp-coffee-500);
+    text-decoration: none; padding: 8px 14px; border-radius: var(--r-pill); transition: background var(--dur) var(--ease), color var(--dur) var(--ease); }
+  .nav__link:hover { background: var(--surface-sand); color: var(--lp-espresso); }
+  .header__toggle { display: none; flex-direction: column; justify-content: center; gap: 5px; width: 44px; height: 44px;
+    border: var(--bw-strong) solid var(--border-strong); border-radius: var(--r-sm); background: transparent; cursor: pointer; }
+  .header__toggle span { display: block; width: 20px; height: 2px; margin-inline: auto; background: var(--lp-espresso); border-radius: 2px; }
+  /* 1200px, no 760: el nav horizontal pide ~1000px con la sesión cerrada, así
+     que entre 761 y 1199 no cabía y la página entera se iba de lado (a 800px
+     el documento medía 1074px de ancho). account.css usa 1200 para la landing
+     y las páginas de cuenta; acá va el mismo número. */
+  @media (max-width: 1200px) {
+    .nav { position: fixed; inset: 68px 0 0 0; flex-direction: column; align-items: stretch; background: var(--surface-page);
+      padding: var(--sp-4); gap: var(--sp-2); transform: translateY(-8px); opacity: 0; pointer-events: none; transition: all var(--dur) var(--ease); overflow-y: auto; }
+    .nav--open { transform: none; opacity: 1; pointer-events: auto; }
+    .header__toggle { display: flex; }
+    .nav__cta { width: 100%; text-align: center; justify-content: center; }
+  }
+
+  .product { display: grid; grid-template-columns: 1fr; gap: var(--sp-6); padding: var(--sp-5) 0 var(--sp-9); align-items: start;
+    max-width: 1080px; margin: 0 auto; }
+
+  .eyebrow { text-transform: uppercase; letter-spacing: var(--ls-eyebrow); font-size: var(--fs-caption); font-weight: var(--fw-bold); color: var(--points); }
+  .p__title { font-family: var(--font-display); font-size: clamp(2.25rem, 3.4vw, 3.5rem); line-height: var(--lh-display); color: var(--text-strong);
+    margin: var(--sp-2) 0 var(--sp-3); letter-spacing: var(--ls-display); }
+  .p__presentacion { display: grid; grid-template-columns: 1fr; gap: var(--sp-5); align-items: start; }
+  .p__presentacion--sin-imagen { grid-template-columns: 1fr; }
+  .p__media { display: block; width: min(100%, 360px); margin: 0; }
+  .p__media[hidden] { display: none; }
+  .p__image { display: block; width: 100%; height: auto; border-radius: var(--r-lg); }
+  .p__detalle { min-width: 0; }
+  .p__desc { margin: 0 0 var(--sp-4); color: var(--text-body); font-size: var(--fs-body); line-height: 1.65; }
+  @media (min-width: 960px) {
+    .p__presentacion { grid-template-columns: minmax(280px, 360px) minmax(0, 1fr); gap: var(--sp-7); }
+    .p__presentacion.p__presentacion--sin-imagen { grid-template-columns: 1fr; }
+    .p__media { width: 100%; }
+  }
+  .p__price { display: flex; align-items: baseline; gap: var(--sp-4); flex-wrap: wrap; margin-bottom: var(--sp-5); }
+  .p__clp { font-size: 1.9rem; font-weight: var(--fw-bold); color: var(--text-strong); }
+  .p__pts { font-weight: var(--fw-semibold); color: var(--points); }
+  .star-token { color: var(--points); }
+
+  /* Acciones de compra: agregar al carrito + comprar ahora */
+  .buy__actions { display: grid; gap: var(--sp-2); }
+  @media (min-width: 480px) { .buy__actions { grid-template-columns: 1fr 1fr; } }
+
+  fieldset { border: 0; margin: 0 0 var(--sp-5); padding: 0; }
+  .field__label { display: block; font-weight: var(--fw-semibold); color: var(--text-strong); margin-bottom: var(--sp-2); font-size: var(--fs-small); }
+  .pills { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+  .pills input { position: absolute; opacity: 0; pointer-events: none; }
+  .pills label { display: inline-flex; align-items: center; justify-content: center; padding: var(--sp-2) var(--sp-4); border-radius: var(--r-pill);
+    cursor: pointer; border: var(--bw-strong) solid var(--border-strong); background: var(--surface-card); font-weight: var(--fw-medium);
+    font-size: var(--fs-small); color: var(--text-body); transition: all var(--dur-fast) var(--ease-out); }
+  .pills label:hover { border-color: var(--accent); }
+  .pills input:checked + label { background: var(--accent); border-color: var(--accent); color: var(--text-on-dark); }
+  .pills input:focus-visible + label { box-shadow: var(--shadow-focus); }
+  /* Agotado: se ve, se lee y no se puede elegir. Esconder la opcion haria
+     creer que nunca existio ese tamano o esa molienda. */
+  .pills label.pill--agotada { opacity: .42; cursor: not-allowed; text-decoration: line-through; }
+  .pills label.pill--agotada:hover { border-color: var(--border-strong); }
+  .pills input:disabled + label { pointer-events: none; }
+  .hint { color: var(--text-muted); font-size: var(--fs-caption); margin: var(--sp-2) 0 0; }
+
+  .qty { display: inline-flex; align-items: center; border: var(--bw-strong) solid var(--border-strong); border-radius: var(--r-pill); overflow: hidden; }
+  .qty__btn { width: 44px; height: 44px; border: 0; background: var(--surface-card); cursor: pointer; font-size: 1.25rem; color: var(--text-strong); line-height: 1; }
+  .qty__btn:hover { background: var(--surface-sand); }
+  .qty__input { width: 54px; height: 44px; border: 0; text-align: center; font-family: var(--font-body); font-size: var(--fs-body);
+    font-weight: var(--fw-semibold); color: var(--text-strong); background: var(--surface-card); -moz-appearance: textfield; }
+  .qty__input::-webkit-outer-spin-button, .qty__input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); font-family: var(--font-body); font-weight: var(--fw-semibold);
+    border: 0; cursor: pointer; border-radius: var(--r-pill); padding: var(--sp-3) var(--sp-6); font-size: var(--fs-body);
+    transition: transform var(--dur-fast) var(--ease-out), background var(--dur-fast); }
+  .btn--primary { background: var(--accent); color: var(--text-on-dark); }
+  .btn--primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+  .btn--lg { padding: var(--sp-4) var(--sp-6); font-size: var(--fs-lead); }
+  .btn--block { width: 100%; }
+
+  .note { display: flex; gap: var(--sp-2); align-items: flex-start; color: var(--text-muted); font-size: var(--fs-small); margin-top: var(--sp-4); }
+  .ficha { margin-top: var(--sp-7); padding-top: var(--sp-6); border-top: var(--bw) solid var(--divider); }
+  .ficha__title { margin: 0 0 var(--sp-4); font-family: var(--font-display); font-size: 2rem; line-height: 1;
+    letter-spacing: var(--ls-display); color: var(--text-strong); }
+  .ficha__lista { display: grid; grid-template-columns: 1fr; gap: var(--sp-3); margin: 0; }
+  .ficha__dato { min-width: 0; padding: var(--sp-4); background: var(--surface-card); border: var(--bw) solid var(--border);
+    border-radius: var(--r-md); }
+  .ficha__etiqueta { margin: 0 0 var(--sp-1); color: var(--points); font-size: var(--fs-caption);
+    font-weight: var(--fw-bold); letter-spacing: var(--ls-eyebrow); text-transform: uppercase; }
+  .ficha__valor { margin: 0; color: var(--text-strong); font-size: var(--fs-body); line-height: 1.5; overflow-wrap: anywhere; }
+  @media (min-width: 560px) {
+    .ficha__lista { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ficha__dato:first-child, .ficha__dato:nth-child(6) { grid-column: 1 / -1; }
+  }
+
+  /* ===== Footer (idéntico al index) ===== */
+  .footer { background: var(--lp-espresso); color: var(--text-on-dark); margin-top: var(--sp-9); }
+  .footer__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--sp-6); padding-block: var(--sp-8) var(--sp-6); }
+  .footer__logo { height: 76px; width: auto; object-fit: contain; margin-bottom: var(--sp-2); }
+  .footer__brand-name { font-family: var(--font-display); font-size: 1.6rem; line-height: 0.95; color: var(--lp-cream-50); }
+  .footer__text { color: var(--text-on-dark-mut); font-size: 0.85rem; margin-top: var(--sp-3); max-width: 28ch; }
+  .footer__title { color: var(--lp-gold-soft); font-size: 0.7rem; letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: var(--sp-3); }
+  .footer__list { list-style: none; padding: 0; margin: 0; }
+  .footer__list li { margin-bottom: var(--sp-2); }
+  .footer__link { color: var(--text-on-dark-mut); font-size: 0.875rem; text-decoration: none; }
+  .footer__link:hover { color: var(--lp-cream-50); }
+  .footer__social { display: flex; gap: var(--sp-2); margin-top: var(--sp-2); }
+  .footer__social a { width: 38px; height: 38px; border-radius: 50%; border: var(--bw) solid rgba(255,255,255,0.18);
+    display: inline-flex; align-items: center; justify-content: center; color: var(--lp-cream-50); text-decoration: none; transition: background var(--dur) var(--ease); }
+  .footer__social a:hover { background: rgba(255,255,255,0.12); }
+  .footer__bottom { border-top: var(--bw) solid rgba(255,255,255,0.1); padding: var(--sp-4) var(--gutter); text-align: center; color: var(--text-on-dark-mut); font-size: 0.75rem; }
+  .footer__dev { display: inline-block; margin-top: 6px; font-size: 0.78rem; }
+  .footer__dev strong { color: var(--text-on-dark); font-weight: var(--fw-semibold); }
+  .footer__dev a { color: var(--text-on-dark); text-decoration: underline; text-underline-offset: 2px; }
+  .footer__dev a:hover { color: var(--lp-gold-soft); }
+
+  /* --- Volver arriba ------------------------------------------------------ */
+  .to-top {
+    position: fixed;
+    right: var(--sp-4);
+    bottom: calc(var(--sp-4) + env(safe-area-inset-bottom, 0px));
+    z-index: 60;
+    width: 48px; height: 48px;
+    display: grid; place-items: center;
+    border: 0; border-radius: 50%; cursor: pointer;
+    background: var(--accent); color: var(--text-on-dark);
+    box-shadow: var(--shadow-md);
+    opacity: 0; visibility: hidden; transform: translateY(8px);
+    transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease),
+                visibility var(--dur) var(--ease), background var(--dur-fast) var(--ease);
+  }
+  .to-top--visible { opacity: 1; visibility: visible; transform: none; }
+  .to-top:hover { background: var(--accent-hover); }
+  .to-top:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
+  .to-top__icon { width: 20px; height: 20px; }
+  @media (prefers-reduced-motion: reduce) { .to-top { transition: none; } }
+  @media (min-width: 768px) {
+    .to-top { right: var(--sp-5); bottom: var(--sp-5); width: 52px; height: 52px; }
+  }
+</style>
+{% include '_temporada.html' %}
+</head>
+<body>
+  <header class="header">
+    <div class="container header__inner">
+      <a class="header__brand" href="{{ url_for('home') }}" aria-label="{{ negocio.nombre }} — Inicio">
+        <img class="header__brand-logo" src="{{ url_for('static', filename=negocio.logo) }}" alt="" />
+        <span class="header__brand-name">{{ negocio.nombre_corto }}</span>
+        <span class="header__brand-tag">{{ negocio.tag }}</span>
+      </a>
+      {% include '_nav.html' %}
+      {% include '_carrito-boton.html' %}
+      <button class="header__toggle" id="navToggle" aria-label="Abrir menú" aria-expanded="false" aria-controls="nav">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="product">
+      <div class="info">
+        <span class="eyebrow" id="pVendor">{{ negocio.nombre }}</span>
+        <h1 class="p__title" id="pTitle">Producto</h1>
+        <div class="p__presentacion">
+          <figure class="p__media" id="pImagenContenedor" hidden>
+            <img class="p__image" id="pImagen" src="" alt="" decoding="async" fetchpriority="high" />
+          </figure>
+          <div class="p__detalle">
+            <p class="p__desc" id="pDesc"></p>
+            <div class="p__price">
+              <span class="p__clp" id="pClp">$0</span>
+            </div>
+
+            <form id="buyForm">
+              <fieldset id="fsTamano">
+                <legend class="field__label">Opción</legend>
+                <div class="pills" id="sizePills"></div>
+              </fieldset>
+
+              <fieldset id="fsMolienda">
+                <legend class="field__label">Variante</legend>
+                <div class="pills" id="grindPills"></div>
+                <p class="hint">Lo molemos justo antes de despachar. No cambia el precio.</p>
+              </fieldset>
+
+              <fieldset>
+                <legend class="field__label">Cantidad</legend>
+                <div class="qty">
+                  <button class="qty__btn" type="button" id="qMinus" aria-label="Restar uno">&minus;</button>
+                  <input class="qty__input" id="qInput" type="number" value="1" min="1" inputmode="numeric" />
+                  <button class="qty__btn" type="button" id="qPlus" aria-label="Sumar uno">+</button>
+                </div>
+              </fieldset>
+
+              <div class="buy__actions">
+                <button class="btn btn--primary btn--lg btn--block" type="submit">Agregar al carrito</button>
+                <button class="btn btn--outline btn--lg btn--block" type="button" id="buyNow">Comprar ahora</button>
+              </div>
+              <p class="note"><span class="star-token">★</span> <span>Puedes seguir agregando productos: el pago se completa de una sola vez y de forma segura en Shopify.</span></p>
+            </form>
+          </div>
+        </div>
+
+        <section class="ficha" id="fichaTecnica" aria-labelledby="fichaTitulo" hidden>
+          <h2 class="ficha__title" id="fichaTitulo">Ficha técnica</h2>
+          <dl class="ficha__lista" id="pFicha"></dl>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer__grid">
+      <div>
+        <img class="footer__logo" src="{{ url_for('static', filename=negocio.logo) }}" alt="" />
+        <div class="footer__brand-name">{{ negocio.nombre_corto }}<br/>{{ negocio.tag|title }}</div>
+        <p class="footer__text">{{ negocio.lema }}. {{ negocio.ciudad }}, {{ negocio.pais }}.</p>
+      </div>
+      <div>
+        <h4 class="footer__title">Explorar</h4>
+        <ul class="footer__list">
+          <li><a class="footer__link" href="{{ url_for('home') }}#carta">Catálogo</a></li>
+          <li><a class="footer__link" href="{{ url_for('home') }}#tienda">Tienda</a></li>
+          <li><a class="footer__link" href="{{ url_for('home') }}#talleres">Cursos</a></li>
+          <li><a class="footer__link" href="{{ url_for('home') }}#puntos">Puntos</a></li>
+          <li><a class="footer__link" href="{{ url_for('home') }}#nosotros">Quiénes somos</a></li>
+          <li><a class="footer__link" href="{{ url_for('home') }}#proximamente">Próximamente</a></li>
+          <li><a class="footer__link" href="{{ url_for('home') }}#ubicacion">Ubicación</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="footer__title">Visítanos</h4>
+        <p class="footer__text" style="max-width: none;">
+          {{ negocio.direccion }}, {{ negocio.ciudad }}<br/>
+          {{ negocio.region }}, {{ negocio.pais }}<br/>
+          Lun–Sáb · 8:30–20:00<br/>
+          Dom · 9:30–14:00
+        </p>
+      </div>
+      {% include '_footer_contacto.html' %}
+    </div>
+    {% include '_footer_credito.html' %}
+  </footer>
+
+  <script>
+  (function(){
+    // El menú móvil y el menú de cuenta los maneja account.js, que esta
+    // página ya carga. Antes había acá una copia del toggle: con las dos,
+    // el click se bindeaba dos veces y el menú abría y cerraba de inmediato.
+
+    /* El catalogo vive en static/js/tienda-productos.js: lo comparten esta
+       ficha y el modal de eleccion rapida de la landing. No duplicar aca. */
+    var P = window.LP_TIENDA.PRODUCTOS;
+
+    function fmt(n){ return n.toLocaleString("es-CL"); }
+    function qs(k){ return new URLSearchParams(location.search).get(k); }
+
+    /* El id por defecto es el PRIMER producto del catalogo, no "brasil"
+       escrito a mano: con el catalogo saliendo de Shopify, los ids son los
+       handles de la tienda y "brasil" puede perfectamente no existir. */
+    var id = qs("id"); if(!P[id]) id = Object.keys(P)[0];
+    var prod = P[id];
+    var GRINDS = window.LP_TIENDA.moliendas(prod);
+    var sizeKeys = prod.sizes ? window.LP_TIENDA.tamanos(prod) : [];
+    var currentSize = sizeKeys.length ? sizeKeys[0] : null;
+    var tieneTamanos = sizeKeys.length && !(sizeKeys.length === 1 && sizeKeys[0] === "Único");
+    var selectedGrind = prod.type==="cafe" ? GRINDS[0] : null;
+
+    /* La primera combinacion comprable: abrir la ficha con una molienda
+       agotada elegida deja el boton muerto sin explicar por que. */
+    if(sizeKeys.length){
+      buscar: for(var si=0; si<sizeKeys.length; si++){
+        var gs = prod.type==="cafe" ? GRINDS : [null];
+        for(var gi=0; gi<gs.length; gi++){
+          if(window.LP_TIENDA.disponible(prod, sizeKeys[si], gs[gi])){
+            currentSize = sizeKeys[si];
+            selectedGrind = gs[gi];
+            break buscar;
+          }
+        }
+      }
+    }
+
+    document.title = prod.name + " · {{ negocio.nombre }}";
+    document.getElementById("pTitle").textContent = prod.name;
+    document.getElementById("pVendor").textContent = prod.vendor;
+    var imagenContenedor = document.getElementById("pImagenContenedor");
+    var imagen = document.getElementById("pImagen");
+    if(prod.imagen){
+      imagen.src = prod.imagen;
+      imagen.alt = prod.imagen_alt || prod.name;
+      imagenContenedor.hidden = false;
+    } else {
+      imagenContenedor.parentElement.classList.add("p__presentacion--sin-imagen");
+    }
+    var descripcion = document.getElementById("pDesc");
+    descripcion.textContent = prod.desc || "";
+    descripcion.hidden = !prod.desc;
+
+    /* Los valores los decide Shopify y se escriben como texto, nunca como
+       HTML: un metacampo no debe poder inyectar etiquetas en esta página. */
+    var ficha = Array.isArray(prod.ficha) ? prod.ficha : [];
+    var fichaSeccion = document.getElementById("fichaTecnica");
+    var fichaLista = document.getElementById("pFicha");
+    ficha.forEach(function(campo){
+      if(!campo || !campo.etiqueta || !campo.valor){ return; }
+      var dato = document.createElement("div");
+      dato.className = "ficha__dato";
+      var etiqueta = document.createElement("dt");
+      etiqueta.className = "ficha__etiqueta";
+      etiqueta.textContent = campo.etiqueta;
+      var valor = document.createElement("dd");
+      valor.className = "ficha__valor";
+      valor.textContent = campo.valor;
+      dato.appendChild(etiqueta);
+      dato.appendChild(valor);
+      fichaLista.appendChild(dato);
+    });
+    fichaSeccion.hidden = !fichaLista.children.length;
+
+    function data(){ return prod.sizes ? prod.sizes[currentSize] : prod; }
+    function render(){
+      var d = data();
+      document.getElementById("pClp").textContent = "$" + fmt(d.clp);
+
+      /* Sin stock no se puede comprar, y los dos botones lo dicen. Dejarlos
+         activos manda a la persona a un checkout que la va a rechazar. */
+      var hay = window.LP_TIENDA.disponible(prod, currentSize, selectedGrind);
+      var agregar = document.querySelector("#buyForm button[type=submit]");
+      var ya = document.getElementById("buyNow");
+      if(agregar){ agregar.disabled = !hay; }
+      if(ya){ ya.disabled = !hay; ya.textContent = hay ? ya.dataset.textoOriginal || ya.textContent : "Agotado por ahora"; }
+      if(ya && !ya.dataset.textoOriginal && hay){ ya.dataset.textoOriginal = ya.textContent; }
+    }
+
+    /* Una opcion agotada se desactiva, no se esconde: que se vea que existe
+       y que hoy no hay. El stock lo dice Shopify; con el respaldo, todo
+       figura disponible porque el respaldo no sabe de stock. */
+    function sinStock(s, g){ return !window.LP_TIENDA.disponible(prod, s, g); }
+
+    var fsT = document.getElementById("fsTamano");
+    if(tieneTamanos){
+      var sbox = document.getElementById("sizePills");
+      sizeKeys.forEach(function(s,i){
+        var muerto = prod.type==="cafe"
+          ? GRINDS.every(function(g){ return sinStock(s,g); })
+          : sinStock(s, null);
+        var input=document.createElement("input"); input.type="radio"; input.name="tamano"; input.id="sz"+i;
+        input.checked = (s===currentSize); input.disabled = muerto;
+        var label=document.createElement("label"); label.setAttribute("for","sz"+i); label.textContent=s;
+        if(muerto){ label.classList.add("pill--agotada"); label.title="Agotado por ahora"; }
+        input.addEventListener("change", function(){ currentSize=s; pintarMoliendas(); render(); });
+        sbox.appendChild(input); sbox.appendChild(label);
+      });
+    } else { fsT.style.display="none"; }
+
+    var fsM = document.getElementById("fsMolienda");
+    function pintarMoliendas(){
+      if(prod.type!=="cafe"){ fsM.style.display="none"; return; }
+      var gbox = document.getElementById("grindPills");
+      gbox.innerHTML = "";
+      GRINDS.forEach(function(g,i){
+        var muerto = sinStock(currentSize, g);
+        var input=document.createElement("input"); input.type="radio"; input.name="molienda"; input.id="g"+i;
+        input.checked = (g===selectedGrind); input.disabled = muerto;
+        var label=document.createElement("label"); label.setAttribute("for","g"+i); label.textContent=g;
+        if(muerto){ label.classList.add("pill--agotada"); label.title="Agotado por ahora"; }
+        input.addEventListener("change", function(){ selectedGrind=g; render(); });
+        gbox.appendChild(input); gbox.appendChild(label);
+      });
+    }
+    pintarMoliendas();
+
+    render();
+
+    var qInput=document.getElementById("qInput");
+    document.getElementById("qMinus").addEventListener("click", function(){ qInput.value=Math.max(1,(parseInt(qInput.value,10)||1)-1); });
+    document.getElementById("qPlus").addEventListener("click", function(){ qInput.value=(parseInt(qInput.value,10)||1)+1; });
+
+    /* La seleccion de la ficha se traduce a UNA linea de carrito. La variante
+       ya codifica tamano + molienda, asi que es la clave natural de la linea.
+       El armado vive en LP_TIENDA.linea() para que la ficha y el modal de la
+       landing produzcan exactamente la misma linea. */
+    function seleccionActual(){
+      return window.LP_TIENDA.linea(prod, currentSize, selectedGrind,
+                                    Math.max(1, parseInt(qInput.value,10)||1));
+    }
+
+    document.getElementById("buyForm").addEventListener("submit", function(e){
+      e.preventDefault();
+      if(!window.LPCarrito){ return; }
+      window.LPCarrito.agregar(seleccionActual());
+      window.LPCarrito.abrir();
+      qInput.value = 1;
+    });
+
+    document.getElementById("buyNow").addEventListener("click", function(){
+      if(!window.LPCarrito){ return; }
+      window.LPCarrito.agregar(seleccionActual());
+      var url = window.LPCarrito.urlCheckout();
+      if(url){ window.location.href = url; }
+      else { window.LPCarrito.abrir(); }
+    });
+  })();
+  </script>
+
+  <!-- ============================ VOLVER ARRIBA ============================ -->
+  <button class="to-top" id="toTop" type="button" aria-label="Volver arriba">
+    <svg class="to-top__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M12 19V5"/><path d="M5 12l7-7 7 7"/>
+    </svg>
+  </button>
+
+  <script>
+  (function(){
+    var btn = document.getElementById("toTop");
+    if (!btn) return;
+
+    var SHOW_AT = 400;   /* px de scroll antes de que aparezca */
+    var ticking = false;
+
+    function update(){
+      btn.classList.toggle("to-top--visible", window.scrollY > SHOW_AT);
+      ticking = false;
+    }
+
+    window.addEventListener("scroll", function(){
+      if (!ticking) { ticking = true; window.requestAnimationFrame(update); }
+    }, { passive: true });
+
+    btn.addEventListener("click", function(){
+      var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+    });
+
+    update();
+  })();
+  </script>
+  <script src="{{ url_for('static', filename='js/account.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/carrito.js') }}"></script>
+</body>
+</html>

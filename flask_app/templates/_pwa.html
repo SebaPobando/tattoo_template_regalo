@@ -1,0 +1,30 @@
+{#
+  _pwa.html — lo que hace al sitio instalable en la pantalla de inicio
+
+  Va en el <head> de todo lo que la gente abre desde el teléfono: la portada
+  (landing.html), la ficha de producto, y todo lo que extiende base.html.
+
+  SIN SERVICE WORKER, A PROPÓSITO. Chrome dejó de exigirlo para instalar
+  (versión 108 en móvil, 112 en escritorio) justamente porque la gente ponía
+  uno vacío solo para cumplir el requisito. Y un service worker que cachee la
+  carta serviría precios viejos, que es la falla que el resto del proyecto
+  evita en todos lados: una carta en blanco es mejor que una con precios de
+  la semana pasada en un negocio donde el precio es lo que cobras. Si algún
+  día se agrega uno, la regla es red primero, y que nunca toque precios ni
+  saldo.
+
+  EL MANIFEST NO ES UN ARCHIVO ESTÁTICO: lo arma Flask con los datos de
+  config/negocio.py. Así, instalar la plantilla para otro cliente no obliga a
+  acordarse de editar un JSON aparte — que es justo el archivo que se olvida
+  y deja al teléfono del cliente diciendo «Café Ejemplo».
+#}
+<link rel="manifest" href="{{ url_for('manifest') }}" />
+{# El color de la barra del navegador en el teléfono. Va el fondo del sitio y
+   no el acento: es el color que la persona ve al desplazarse. #}
+<meta name="theme-color" content="{{ negocio.colores.fondo }}" />
+{# iOS ignora el manifest para el icono; usa esta etiqueta. #}
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='img/pwa/apple-touch-icon.png') }}" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="{{ negocio.pwa_nombre }}" />
+<link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='img/pwa/icono-192.png') }}" />

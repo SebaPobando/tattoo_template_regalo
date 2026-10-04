@@ -1,0 +1,446 @@
+/* ===========================================================================
+   Plantilla Cafetería — Carrito (drawer lateral + badge del header)
+   ---------------------------------------------------------------------------
+   Depende solo de los tokens (tokens/colors.css, tokens/spacing.css) y de las
+   clases .btn de styles.css. Metodologia BEM. Mobile first.
+   Bloques: .cart-toggle, .cart, .cart-line
+   =========================================================================== */
+
+/* ============================ Boton del header ============================ */
+
+.cart-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: var(--bw-strong) solid var(--border-strong);
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--lp-espresso);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+
+.cart-toggle:hover { background: var(--surface-sand); border-color: var(--accent); }
+.cart-toggle:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
+
+.cart-toggle__badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  color: var(--text-on-dark);
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: var(--fw-bold);
+  line-height: 1;
+}
+
+.cart-toggle__badge[hidden] { display: none; }
+
+/* ================================= Drawer ================================= */
+
+.cart {
+  position: fixed;
+  inset: 0;
+  z-index: 90;   /* .header usa 50 */
+}
+
+.cart[hidden] { display: none; }
+
+.cart__overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(22, 22, 22, 0.42);
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease-out);
+}
+
+.cart--open .cart__overlay { opacity: 1; }
+
+.cart__panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(420px, 100%);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-page);
+  box-shadow: var(--shadow-lg);
+  transform: translateX(100%);
+  transition: transform var(--dur) var(--ease-out);
+}
+
+.cart--open .cart__panel { transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cart__overlay, .cart__panel { transition: none; }
+}
+
+.cart__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: var(--sp-5);
+  border-bottom: var(--bw) solid var(--border);
+  background: var(--surface-card);
+}
+
+.cart__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--text-strong);
+}
+
+.cart__head-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+/* Vaciar: accion destructiva, asi que se ve secundaria hasta que se confirma */
+.cart__clear {
+  border: 0;
+  background: transparent;
+  padding: 6px 10px;
+  border-radius: var(--r-pill);
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+
+.cart__clear:hover { color: var(--lp-danger); background: var(--surface-sand); }
+.cart__clear:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
+.cart__clear[hidden] { display: none; }
+
+.cart__clear--confirm {
+  color: var(--text-on-dark);
+  background: var(--lp-danger);
+}
+
+.cart__clear--confirm:hover { color: var(--text-on-dark); background: var(--lp-danger); }
+
+.cart__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--text-body);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.cart__close:hover { background: var(--surface-sand); }
+.cart__close:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
+
+.cart__body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: var(--sp-5);
+}
+
+.cart__empty {
+  margin: var(--sp-6) 0;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--fs-small);
+}
+
+.cart__empty[hidden], .cart__list[hidden] { display: none; }
+
+.cart__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.cart__foot {
+  flex: 0 0 auto;
+  padding: var(--sp-5);
+  border-top: var(--bw) solid var(--border);
+  background: var(--surface-card);
+}
+
+.cart__total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-4);
+}
+
+.cart__total-label {
+  font-weight: var(--fw-semibold);
+  color: var(--text-strong);
+}
+
+.cart__total-values { text-align: right; }
+
+.cart__total-clp {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: var(--fw-bold);
+  color: var(--text-strong);
+}
+
+.cart__total-pts {
+  display: block;
+  font-size: var(--fs-small);
+  font-weight: var(--fw-semibold);
+  color: var(--points);
+}
+
+.cart__checkout[disabled] { opacity: 0.45; cursor: not-allowed; }
+
+/* Los dos botones del pie van juntos; la nota queda debajo del par. */
+.cart__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+/* "Seguir comprando": accion secundaria, en cafe para no competir con el verde
+   de "Ir a pagar". No usa .btn porque esas clases estan definidas dentro de
+   cada plantilla (landing, producto, account) y el drawer se inyecta en todas:
+   con BEM propio se ve igual en las tres. */
+.cart__continue {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  padding: 17px 32px;
+  font-family: var(--font-body);
+  font-size: 1.0625rem;
+  font-weight: var(--fw-semibold);
+  line-height: 1;
+  color: var(--lp-coffee-500);
+  background: transparent;
+  border: var(--bw-strong) solid var(--lp-coffee-500);
+  border-radius: var(--r-pill, 999px);
+  cursor: pointer;
+  transition: background-color .18s ease, color .18s ease, border-color .18s ease;
+}
+
+.cart__continue:hover,
+.cart__continue:focus-visible {
+  color: var(--lp-cream-50);
+  background: var(--lp-coffee-500);
+  border-color: var(--lp-coffee-500);
+}
+
+.cart__continue:focus-visible {
+  outline: 2px solid var(--lp-caramel);
+  outline-offset: 2px;
+}
+
+.cart__note {
+  margin: var(--sp-3) 0 0;
+  font-size: var(--fs-caption);
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+/* =============================== Linea ==================================== */
+
+.cart-line {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  background: var(--surface-card);
+  border: var(--bw) solid var(--border);
+  border-radius: var(--r-md);
+}
+
+.cart-line__info { min-width: 0; flex: 1 1 auto; }
+
+.cart-line__name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  line-height: 1.15;
+  color: var(--text-strong);
+}
+
+.cart-line__opts {
+  margin: 4px 0 0;
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+}
+
+.cart-line__opts[hidden] { display: none; }
+
+.cart-line__price {
+  margin: var(--sp-2) 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-2);
+}
+
+.cart-line__clp { font-weight: var(--fw-bold); color: var(--text-strong); }
+
+.cart-line__pts {
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+  color: var(--points);
+}
+
+.cart-line__actions {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--sp-2);
+}
+
+.cart-line__qty {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: var(--bw-strong) solid var(--border-strong);
+  border-radius: var(--r-pill);
+  overflow: hidden;
+}
+
+.cart-line__step {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  background: transparent;
+  color: var(--text-strong);
+  font-size: 1rem;
+  font-weight: var(--fw-bold);
+  line-height: 1;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.cart-line__step:hover { background: var(--surface-sand); }
+.cart-line__step:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
+
+.cart-line__count {
+  min-width: 24px;
+  text-align: center;
+  font-weight: var(--fw-semibold);
+  font-size: 0.9rem;
+  color: var(--text-strong);
+}
+
+.cart-line__remove {
+  border: 0;
+  background: transparent;
+  padding: 2px 4px;
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.cart-line__remove:hover { color: var(--lp-danger); }
+.cart-line__remove:focus-visible { outline: none; box-shadow: var(--shadow-focus); border-radius: var(--r-xs); }
+
+/* ==================== Bloqueo de scroll del fondo ========================= */
+
+body.has-cart-open { overflow: hidden; }
+
+/* ======================= Ajuste del header ================================ */
+/* El nav de escritorio solo existe sobre 1200px (bajo eso account.css lo
+   convierte en overlay), y ahi el contenedor esta topado en 1180px. Con la
+   sesion iniciada la fila pide ~1216px: no cabe, y nunca cupo.
+
+   Flexbox lo resolvia encogiendo items. Como .header__brand es inline-flex,
+   su minimo automatico es el ancho de su hijo mas ancho ("el nombre de la marca"), no
+   la suma: la marca se encogia a 267px de 357px y el "COFFEE" se salia de su
+   caja y se montaba sobre "Inicio". El choque ya existia antes del carrito
+   (24px); el boton de 44px lo llevo a 74px.
+
+   Arreglo: la marca y el boton no se encogen nunca, y el aire lo pone el
+   nav acortando el padding de sus links. */
+
+.header__inner .nav { margin-left: auto; }
+
+/* sin esto el boton se aplasta y el circulo queda ovalado */
+.cart-toggle { flex: 0 0 auto; }
+
+/* --- Escritorio: el nav horizontal (sobre 1200px) ------------------------ */
+@media (min-width: 1201px) {
+  /* La marca no cede: es la que rompia. */
+  .header__brand { flex: 0 0 auto; }
+
+  /* El aire lo pone el nav. 14px -> 10px por lado libera ~64px con 8 links.
+     Con la sesion cerrada el nav trae 6 links + 2 CTA, que son mas anchos,
+     asi que ahi tambien apretamos las CTA y el gap. */
+  .header__inner .nav__link { padding-inline: 10px; }
+  /* 10px y no 12: con sesion cerrada las dos CTA son lo mas ancho del nav y
+     por 5px el boton del carrito se salia del gutter. Con sesion iniciada
+     sobran ~100px porque el menu de cuenta reemplazo a tres links. */
+  .header__inner .nav__cta { padding-inline: 10px; }
+  .header__inner .nav { gap: 4px; }
+}
+
+/* --- Bajo 1200px: el nav es overlay, la fila es marca + carrito + menu --- */
+/* Aca la marca SI puede encogerse (si no, se desborda el header en un
+   telefono). El problema es que al encogerse "COFFEE" se sale de su caja,
+   porque el minimo automatico de un inline-flex es su hijo mas ancho.
+   En pantallas chicas lo escondemos: el logo y "el nombre de la marca" bastan. */
+@media (max-width: 560px) {
+  .header__brand-tag { display: none; }
+}
+
+/* --- Bajo 1200px: la marca no puede montarse sobre el carrito ------------ */
+/* account.css deja `.header__brand { flex: 0 1 auto; min-width: 0 }` y
+   `.header__brand-name { white-space: nowrap }`. Las dos juntas son el bug:
+   la CAJA de la marca se encoge con el viewport, el TEXTO no, y "el nombre de la marca"
+   se desborda por la derecha encima del boton del carrito. Se ve bajo ~425px
+   (a 320px el texto se pasa 86px). No era el carrito ni el nav: era que el
+   nombre no tenia como achicarse.
+
+   Arreglo: el nombre escala con el ancho hasta que cabe, y la marca recorta
+   como red de seguridad para que NUNCA vuelva a solaparse, pase lo que pase
+   con el largo del texto o con lo que se agregue al header.
+
+   La formula es lineal a proposito: 8.6vw - 13.6px da 14px a 320px (donde
+   solo caben ~146px de texto) y llega a los 24px de diseno a los 437px. Un
+   clamp con vw pelado no sirve: la pendiente del espacio disponible no pasa
+   por el origen.
+
+   Los selectores llevan `.header__inner` a proposito: el <style> de
+   landing.html y de producto.html va DESPUES de este archivo y define
+   `.header__brand-name { font-size: 1.5rem }` con la misma especificidad.
+   Sin el prefijo, esta regla pierde. */
+@media (max-width: 1200px) {
+  .header .header__inner { gap: var(--sp-2); }
+  .header__inner .header__brand { min-width: 0; overflow: hidden; }
+  .header__inner .header__brand-name {
+    font-size: clamp(0.875rem, calc(8.6vw - 13.6px), 1.5rem);
+  }
+}

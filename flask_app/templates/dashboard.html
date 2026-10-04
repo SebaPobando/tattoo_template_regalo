@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block title %}Mi dashboard · {{ negocio.nombre }}{% endblock %}
+{% block descripcion %}Revisa tu saldo de {{ negocio.puntos.nombre }} y tu historial de movimientos.{% endblock %}
+{% block head_extra %}
+<style>
+  /* --- Mis actividades ---------------------------------------------------
+     Una fila por inscripción: el cuadradito de calendario, el nombre con su
+     estado, y el botón que lleva al voucher. El afiche NO va acá: a este
+     tamaño no se lee y la fecha ya está escrita al lado. */
+  .acts { display:flex; flex-direction:column; gap:var(--sp-3) }
+  .act { display:flex; gap:var(--sp-3); align-items:center;
+    padding:var(--sp-3); border:var(--bw) solid var(--border);
+    border-radius:var(--r-md); background:var(--surface-card) }
+  .act--cerrada { opacity:.66 }
+  .act__fecha { flex:none; width:52px; text-align:center; padding:6px 0;
+    border-radius:var(--r-sm); background:var(--surface-sand) }
+  .act__dia { display:block; font-family:var(--font-display); font-size:1.15rem;
+    line-height:1; color:var(--lp-espresso) }
+  .act__mes { display:block; font-size:.6rem; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--text-muted); font-weight:var(--fw-bold) }
+  .act__medio { flex:1 1 auto; min-width:0 }
+  .act__nombre { font-weight:var(--fw-semibold); color:var(--lp-espresso);
+    text-decoration:none; display:block; line-height:1.25 }
+  .act__nombre:hover { text-decoration:underline }
+  .act__meta { font-size:.78rem; color:var(--text-muted); margin-top:2px }
+  .act__estado { display:inline-block; font-size:.62rem; letter-spacing:.09em;
+    text-transform:uppercase; font-weight:var(--fw-bold); padding:2px 8px;
+    border-radius:var(--r-pill); margin-top:4px }
+  .act__estado--ok { background:#E7F0E9; color:#1D4A31 }
+  .act__estado--espera { background:var(--lp-gold-bg); color:#9B0D23 }
+  .act__estado--revision { background:#E8EEF5; color:#1F4A7A }
+  .act__estado--fria { background:var(--surface-sand); color:var(--text-muted) }
+  .act__ir { flex:none }
+  .acts__titulo { font-size:.7rem; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--text-muted); font-weight:var(--fw-bold); margin:var(--sp-4) 0 var(--sp-2) }
+  @media (max-width:520px) {
+    .act { flex-wrap:wrap }
+    .act__ir { width:100%; }
+    .act__ir .btn { width:100%; justify-content:center }
+  }
+</style>
+{% endblock %}
+
+{% block contenido %}
+<main class="section"><div class="container">
+<div id="dashContent" class="dash">
+<div style="display:flex;flex-direction:column;gap:var(--sp-6)">
+<div class="balance-card">
+{% if negocio.mascotas %}<img class="balance-card__mascot" src="{{ mascota('completa.png') }}" alt="" aria-hidden="true" />{% endif %}
+<div class="balance-card__eyebrow">Tu saldo<span class="balance-card__pronto">Próximamente</span></div>
+<div class="balance-card__amount"><span class="balance-card__star">★</span><span id="dashPoints">{{ saldo.total_fmt }}</span></div>
+<div class="balance-card__equiv" id="dashEquiv">
+  {% if saldo.total %}
+    Equivalente a {{ saldo.clp_fmt }} CLP · {{ negocio.puntos.por_peso }} CLP = 1 {{ negocio.puntos.sigla }}<br />
+    <small>{{ saldo.prepago_fmt }} pts comprados · {{ saldo.promo_fmt }} pts de regalo</small>
+  {% else %}
+    {{ negocio.puntos.por_peso }} CLP = 1 {{ negocio.puntos.sigla }}<br />
+    <small>Las recargas todavía no están disponibles. Te avisamos apenas se abran.</small>
+  {% endif %}
+</div>
+{# Los botones de recargar y credencial solo aparecen cuando esas pantallas
+   hagan algo. Ofrecer «Recargar puntos» hoy es mandar a una maqueta. #}
+{% if saldo.total %}
+<div class="balance-card__actions">
+<a class="btn btn--gold" href="{{ url_for('recarga') }}">Recargar puntos</a>
+<a class="btn btn--outline" style="color:var(--lp-cream-50);border-color:rgba(252,248,241,.55)" href="{{ url_for('credencial') }}">Ver mi credencial</a>
+</div>
+{% endif %}
+</div>
+{# ----------------------------------------------------------------------
+   Mis actividades. Va ARRIBA del historial de puntos a propósito: el
+   historial todavía está vacío (el ledger es de la Fase 3) y esto es lo
+   único que esta pantalla tiene para decirle hoy a la persona.
+   ---------------------------------------------------------------------- #}
+<div class="card">
+<h3 class="card__title">Mis cursos</h3>
+
+{% if actividades.hay %}
+
+  {% if actividades.proximas %}
+  <div class="acts">
+    {% for act in actividades.proximas %}
+    <div class="act {{ 'act--cerrada' if act.cerrada }}">
+      <div class="act__fecha">
+        <span class="act__dia">{{ act.dia }}</span>
+        <span class="act__mes">{{ act.mes }}</span>
+      </div>
+      <div class="act__medio">
+        <a class="act__nombre" href="{{ url_for('actividad', slug=act.slug) }}">{{ act.nombre }}</a>
+        <div class="act__meta">{{ act.cuando }}{% if act.lugar %} · {{ act.lugar }}{% endif %}</div>
+        <span class="act__estado
+          {%- if act.activo %} act__estado--ok
+          {%- elif act.estado == 'pendiente' %} act__estado--espera
+          {%- elif act.estado == 'por_revisar' %} act__estado--revision
+          {%- else %} act__estado--fria{% endif %}">{{ act.titulo_estado }}</span>
+      </div>
+      {% if act.voucher_codigo and not act.cerrada %}
+      <div class="act__ir">
+        <a class="btn {{ 'btn--primary' if act.activo else 'btn--outline' }} btn--sm"
+           href="{{ url_for('inscripcion', codigo=act.voucher_codigo) }}">
+          {{ 'Ver mi voucher' if act.activo else 'Ver mi inscripción' }}
+        </a>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p style="color:var(--text-muted);font-size:.9rem;margin:0">
+    No tienes cursos próximos.
+    <a href="{{ url_for('actividades') }}">Mira la agenda</a>.
+  </p>
+  {% endif %}
+
+  {% if actividades.pasadas %}
+  <p class="acts__titulo">Ya pasaron</p>
+  <div class="acts">
+    {% for act in actividades.pasadas %}
+    <div class="act act--cerrada">
+      <div class="act__fecha">
+        <span class="act__dia">{{ act.dia }}</span>
+        <span class="act__mes">{{ act.mes }}</span>
+      </div>
+      <div class="act__medio">
+        <span class="act__nombre">{{ act.nombre }}</span>
+        <div class="act__meta">{{ act.cuando }}</div>
+        <span class="act__estado act__estado--fria">{{ act.titulo_estado }}</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+{% else %}
+<p style="color:var(--text-muted);font-size:.9rem;margin:0">
+  Todavía no te has inscrito en ningún curso.
+  <a href="{{ url_for('actividades') }}">Mira la agenda</a>: los cupos
+  se llenan rápido.
+</p>
+{% endif %}
+</div>
+
+<div class="card">
+<h3 class="card__title">Historial de movimientos</h3>
+<table class="table"><thead><tr><th>Fecha</th><th>Tipo</th><th>Detalle</th><th style="text-align:right">Puntos</th></tr></thead><tbody id="dashMovements">
+{% for m in movimientos %}
+<tr>
+  <td>{{ m.fecha }}</td>
+  <td><span class="badge {{ m.badge_clase }}">{{ m.badge_texto }}</span></td>
+  <td>{{ m.detalle }}</td>
+  <td style="text-align:right" class="{{ 'movement__amount--pos' if m.monto > 0 else 'movement__amount--neg' }}">
+    {{ '+' if m.monto > 0 }}{{ m.monto_fmt }} pts
+  </td>
+</tr>
+{% else %}
+<tr><td colspan="4" style="color:var(--text-muted)">Aún no tienes movimientos.</td></tr>
+{% endfor %}
+</tbody></table>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:var(--sp-6)">
+<div class="card">
+<h3 class="card__title">Accesos rápidos</h3>
+<div class="quick-grid">
+<a class="quick-link" href="{{ url_for('home') }}#carta"><span class="quick-link__label">Ver el catálogo</span><span style="font-size:.78rem;color:var(--text-muted)">Precios en pesos chilenos</span></a>
+{% if negocio.tienda_url %}<a class="quick-link" href="{{ url_for('home') }}#tienda"><span class="quick-link__label">Tienda online</span><span style="font-size:.78rem;color:var(--text-muted)">Compra con despacho</span></a>
+{% elif barra_activa() %}<a class="quick-link" href="{{ url_for('pedir') }}"><span class="quick-link__label">Pedir para retirar</span><span style="font-size:.78rem;color:var(--text-muted)">Te lo dejamos listo</span></a>{% endif %}
+{# Sin enlace a propósito: recargar todavía no existe (Fase 3, MercadoPago).
+   Se anuncia el lugar donde va a estar, pero no se manda a nadie a una
+   maqueta. Cuando la recarga funcione, esto vuelve a ser un <a> a recarga(). #}
+<div class="quick-link quick-link--pronto"><span class="quick-link__pill">Próximamente</span><span class="quick-link__label">Recargar puntos</span><span style="font-size:.78rem;color:var(--text-muted)">Compra {{ negocio.puntos.nombre }} por adelantado</span></div>
+<a class="quick-link" href="{{ url_for('muro') }}"><span class="quick-link__label">Comunidad</span><span style="font-size:.78rem;color:var(--text-muted)">Deja tu mensaje</span></a>
+</div>
+</div>
+<div class="card">
+<h3 class="card__title">Tu perfil</h3>
+<div class="profile-grid"><span class="profile-grid__avatar" id="dashAvatar">{{ usuario.iniciales }}</span><div><div class="profile-grid__name" id="dashName">{{ usuario.nombre }}</div><div class="profile-grid__email" id="dashEmail">{{ usuario.email }}</div></div></div>
+<a class="btn btn--outline btn--block" href="{{ url_for('perfil') }}">Editar perfil</a>
+</div>
+</div>
+</div>
+</div></main>
+{% endblock %}

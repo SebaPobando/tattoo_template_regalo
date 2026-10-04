@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Verificar correo · {{ negocio.nombre }}{% endblock %}
+{% block descripcion %}Verifica tu correo para activar tu cuenta {{ negocio.nombre }}.{% endblock %}
+{#
+  Antes esto mostraba siempre "verificado" y tenía un link para alternar al
+  estado de error a mano: era una maqueta. Ahora el estado lo manda el
+  controlador después de leer el token del enlace.
+
+  Se abre desde el correo, así que muchas veces llega sin sesión iniciada y
+  desde otro navegador. Por eso no exige login y ofrece el camino de vuelta.
+#}
+{% block contenido %}
+<main class="auth"><div class="auth__card">
+
+{% if estado == "listo" %}
+  <div class="success-state">
+    {% if negocio.mascotas %}<img src="{{ mascota('brindis.png') }}" alt="" aria-hidden="true" />{% endif %}
+    <h2>¡Tu correo quedó verificado!</h2>
+    <p style="color:var(--text-muted)">
+      Listo. Ya podemos avisarte de tus pedidos y de los cursos a los que te inscribas.
+    </p>
+    <a class="btn btn--primary" href="{{ url_for('dashboard') if usuario else url_for('login') }}">
+      {{ "Ir a mi cuenta" if usuario else "Iniciar sesión" }}
+    </a>
+  </div>
+
+{% elif estado == "ya_estaba" %}
+  <div class="success-state">
+    {% if negocio.mascotas %}<img src="{{ mascota('figura-2.png') }}" alt="" aria-hidden="true" />{% endif %}
+    <h2>Ya estaba verificado</h2>
+    <p style="color:var(--text-muted)">No tenías que hacer nada más. Todo en orden.</p>
+    <a class="btn btn--primary" href="{{ url_for('dashboard') if usuario else url_for('login') }}">
+      {{ "Ir a mi cuenta" if usuario else "Iniciar sesión" }}
+    </a>
+  </div>
+
+{% elif estado == "expirado" %}
+  <div class="success-state">
+    {% if negocio.mascotas %}<img src="{{ mascota('en-construccion.png') }}" alt="" aria-hidden="true" />{% endif %}
+    <h2>El enlace venció</h2>
+    <p style="color:var(--text-muted)">
+      Los enlaces de verificación duran 48 horas. Entra a tu cuenta y pide uno nuevo:
+      te lo mandamos al tiro.
+    </p>
+    <a class="btn btn--primary" href="{{ url_for('dashboard') if usuario else url_for('login') }}">
+      {{ "Ir a mi cuenta" if usuario else "Iniciar sesión" }}
+    </a>
+  </div>
+
+{% else %}
+  <div class="success-state">
+    {% if negocio.mascotas %}<img src="{{ mascota('en-construccion.png') }}" alt="" aria-hidden="true" />{% endif %}
+    <h2>Este enlace no es válido</h2>
+    <p style="color:var(--text-muted)">
+      Puede que se haya cortado al copiarlo, o que corresponda a otro correo.
+      Entra a tu cuenta y pide uno nuevo.
+    </p>
+    <a class="btn btn--primary" href="{{ url_for('dashboard') if usuario else url_for('login') }}">
+      {{ "Ir a mi cuenta" if usuario else "Iniciar sesión" }}
+    </a>
+  </div>
+{% endif %}
+
+</div></main>
+{% endblock %}

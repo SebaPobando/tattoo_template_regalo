@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block title %}Tienda: destacados · {{ negocio.nombre }}{% endblock %}
+{% block descripcion %}Los productos destacados de la tienda.{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/destacados.css') }}" />
+<style>
+  /* =====================================================================
+     Qué productos de la tienda resaltar. Cada fila muestra cómo queda la
+     tarjeta EN VIVO al cambiar el color o la cinta: se elige mirando, no
+     imaginando.
+     ===================================================================== */
+  .dest { max-width: 900px; }
+  .dest__txt { color: var(--text-muted); margin: var(--sp-2) 0 0; max-width: 64ch; line-height: 1.55; }
+  .aviso { margin-top: var(--sp-5); padding: var(--sp-4) var(--sp-5); border-radius: var(--r-md);
+    background: var(--lp-gold-bg); color: #9B0D23; font-size: .9rem; }
+
+  .lista { display: grid; gap: var(--sp-4); margin-top: var(--sp-5); }
+  .item { display: grid; gap: var(--sp-4); align-items: start; padding: var(--sp-4);
+    background: var(--surface-card); border: var(--bw) solid var(--border); border-radius: var(--r-md); }
+  @media (min-width: 680px) { .item { grid-template-columns: 200px 1fr; } }
+  /* min-width: 0 en las columnas y en el fieldset: un fieldset mide por
+     defecto lo que su contenido más ancho, y las pastillas de color no
+     bajaban de línea, empujando la página hacia el lado en el celular. */
+  .item > * { min-width: 0; }
+
+  /* La miniatura: la misma tarjeta de la tienda, en chico. */
+  /* Con UNA clase a propósito: así las reglas de destacados.css (dos
+     clases) le ganan y la miniatura muestra el borde del color elegido. */
+  .mini { display: flex; flex-direction: column; overflow: hidden; position: relative; width: 100%;
+    max-width: 220px; background: var(--surface-card); border: var(--bw) solid var(--border);
+    border-radius: var(--r-lg); box-shadow: var(--shadow-sm); }
+  .mini .product__media { aspect-ratio: 4 / 3; display: flex; align-items: center; justify-content: center;
+    padding: var(--sp-2); background: var(--surface-sand); }
+  .mini .product__media img { width: 100%; height: 100%; object-fit: contain; }
+  .mini__nombre { padding: var(--sp-3); font-weight: var(--fw-bold); color: var(--lp-espresso); font-size: .88rem;
+    line-height: 1.3; overflow-wrap: anywhere; }
+  .mini .product__cinta { font-size: .6rem; top: 8px; left: 8px; }
+  .mini:not(.product--destacado) .product__cinta { display: none; }
+
+  .item__cab { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); align-items: center; justify-content: space-between; }
+  .item__cat { font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; color: var(--text-muted); font-weight: var(--fw-bold); }
+  .interruptor { display: inline-flex; gap: 10px; align-items: center; font-weight: var(--fw-bold); color: var(--lp-espresso); cursor: pointer; }
+  .interruptor input { width: 20px; height: 20px; margin: 0; }
+  .item__opciones { margin-top: var(--sp-3); }
+  .item__opciones[hidden] { display: none; }
+  .js .sin-js { display: none; }
+
+  .colores { display: flex; flex-wrap: wrap; gap: var(--sp-2); border: 0; padding: 0; margin: 0 0 var(--sp-3); min-width: 0; }
+  .color { position: relative; }
+  .color input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+  .color__caja { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px 7px 8px;
+    border: var(--bw-strong) solid var(--border-strong); border-radius: 999px; font-size: .82rem; }
+  .color__muestra { width: 18px; height: 18px; border-radius: 50%; flex: none; }
+  .color input:checked + .color__caja { border-color: var(--lp-espresso); background: var(--surface-sand); font-weight: var(--fw-bold); }
+  .color input:focus-visible + .color__caja { box-shadow: var(--shadow-focus); }
+  .m-dorado { background: #C9A24A; }
+  .m-verde { background: #20392B; }
+  .m-verde_dorado { background: linear-gradient(135deg, #20392B 45%, #C9A24A 55%); }
+  .m-rojo { background: #A3271F; }
+  .m-negro { background: #141414; }
+  .m-cafe { background: #5A3A22; }
+  .m-terracota { background: #B5592E; }
+  .m-vino { background: #6B1E33; }
+  .m-azul { background: #1F3A5F; }
+  .m-plata { background: #8E979F; }
+  .m-rosa { background: #C76B8A; }
+
+  .campos { display: grid; gap: 0 var(--sp-3); grid-template-columns: 1fr 110px; }
+  .campos .field { margin-bottom: 0; min-width: 0; }
+  .campos .field__input { width: 100%; min-width: 0; box-sizing: border-box; }
+
+  .guardar { position: sticky; bottom: 0; z-index: 5; margin-top: var(--sp-5); padding: var(--sp-3) 0;
+    background: linear-gradient(transparent, var(--surface-page) 30%); }
+  .huerfano { display: flex; flex-wrap: wrap; gap: var(--sp-2); justify-content: space-between; align-items: center;
+    padding: var(--sp-3) var(--sp-4); border: var(--bw) dashed var(--border-strong); border-radius: var(--r-md); }
+</style>
+{% endblock %}
+
+{% block contenido %}
+<main class="section"><div class="container dest">
+  <div class="auth__eyebrow">Administración</div>
+  <h1 style="margin:6px 0 0">Tienda: destacados</h1>
+  <p class="dest__txt">
+    Los productos que marques salen con un borde de color y una cinta, van
+    primeros en la tienda (y en su categoría) y se juntan en la pastilla
+    <b>«{{ nombre_especiales }}»</b> de la tienda. Precios, fotos y stock
+    siguen saliendo de Shopify.
+  </p>
+
+  {% if sin_catalogo %}
+  <p class="aviso">
+    No se pudo leer el catálogo de Shopify, así que no hay productos para
+    elegir. Revisa la conexión de la tienda (SHOPIFY_DOMINIO y el token en
+    el .env) o vuelve a intentar en unos minutos.
+    {% if total %}Los {{ total }} destacados guardados se mantienen.{% endif %}
+  </p>
+  {% else %}
+  <form method="POST" action="{{ url_for('admin_tienda_guardar') }}" id="formDestacados">
+    <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+    <div class="lista">
+      {% for p in productos %}
+      <article class="item" data-item>
+        <div class="mini product product--d-{{ p.color }}{{ ' product--destacado' if p.destacado }}" data-mini>
+          <span class="product__cinta" data-cinta>{{ p.cinta }}</span>
+          {% if p.imagen %}<div class="product__media"><img src="{{ p.imagen }}" alt="" loading="lazy" /></div>{% endif %}
+          <div class="mini__nombre">{{ p.nombre }}</div>
+        </div>
+        <div>
+          <div class="item__cab">
+            <label class="interruptor">
+              <input type="checkbox" name="destacar" value="{{ p.handle }}" {{ 'checked' if p.destacado }} data-destacar />
+              Destacar
+            </label>
+            <span class="item__cat">{{ p.categoria }}{% if p.agotado %} · agotado{% endif %}</span>
+          </div>
+          <div class="item__opciones" data-opciones>
+            <fieldset class="colores">
+              <legend class="field__label" style="margin-bottom:6px">Color</legend>
+              {% for clave, nombre in colores.items() %}
+              <label class="color">
+                <input type="radio" name="color__{{ p.handle }}" value="{{ clave }}" {{ 'checked' if p.color == clave }} data-color />
+                <span class="color__caja"><span class="color__muestra m-{{ clave }}"></span>{{ nombre }}</span>
+              </label>
+              {% endfor %}
+            </fieldset>
+            <div class="campos">
+              <div class="field">
+                <label class="field__label" for="cinta_{{ loop.index }}">Cinta</label>
+                <input class="field__input" id="cinta_{{ loop.index }}" name="cinta__{{ p.handle }}" maxlength="{{ largo_cinta }}"
+                       value="{{ p.cinta }}" placeholder="Nuevo" data-texto-cinta />
+              </div>
+              <div class="field">
+                <label class="field__label" for="orden_{{ loop.index }}">Orden</label>
+                <input class="field__input" id="orden_{{ loop.index }}" name="orden__{{ p.handle }}" type="number" min="0" max="999" step="1"
+                       value="{{ p.orden }}" />
+              </div>
+            </div>
+            <p class="field__hint" style="margin:6px 0 0">Orden: entre los destacados, el menor va primero.<span class="sin-js"> Si no lo destacas, esto se ignora.</span></p>
+          </div>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+
+    {% if huerfanos %}
+    <h2 style="font-size:1.1rem;margin:var(--sp-6) 0 var(--sp-2)">Ya no están en la tienda</h2>
+    <p class="dest__txt" style="margin-bottom:var(--sp-3)">Estaban destacados, pero Shopify ya no los muestra (los sacaron de la colección o les cambiaron el nombre de la URL). Desmárcalos y guarda para quitarlos.</p>
+    {% for d in huerfanos %}
+    <label class="huerfano">
+      <span><input type="checkbox" name="destacar" value="{{ d.handle }}" checked /> {{ d.handle }}</span>
+      <span class="item__cat">{{ d.cinta }}</span>
+      <input type="hidden" name="color__{{ d.handle }}" value="{{ d.color }}" />
+      <input type="hidden" name="cinta__{{ d.handle }}" value="{{ d.cinta }}" />
+      <input type="hidden" name="orden__{{ d.handle }}" value="{{ d.orden }}" />
+    </label>
+    {% endfor %}
+    {% endif %}
+
+    <div class="guardar">
+      <button class="btn btn--primary" type="submit">Guardar destacados</button>
+    </div>
+  </form>
+  {% endif %}
+</div></main>
+{% endblock %}
+
+{% block page_js %}
+<script>
+/* La miniatura de cada fila sigue lo que se elige: destacar o no, el color
+   y el texto de la cinta. Sin JavaScript se ve todo y funciona igual al
+   guardar. */
+(function () {
+  var form = document.getElementById('formDestacados');
+  if (!form) return;
+  document.documentElement.classList.add('js');
+  var colores = {{ colores.keys() | list | tojson }};
+
+  function pintar(item) {
+    var mini = item.querySelector('[data-mini]');
+    var on = item.querySelector('[data-destacar]').checked;
+    var color = (item.querySelector('[data-color]:checked') || {}).value || 'dorado';
+    colores.forEach(function (c) { mini.classList.remove('product--d-' + c); });
+    mini.classList.add('product--d-' + color);
+    mini.classList.toggle('product--destacado', on);
+    mini.querySelector('[data-cinta]').textContent =
+      item.querySelector('[data-texto-cinta]').value || 'Edición especial';
+    item.querySelector('[data-opciones]').hidden = !on;
+  }
+
+  form.querySelectorAll('[data-item]').forEach(pintar);
+  form.addEventListener('input', function (e) { var it = e.target.closest('[data-item]'); if (it) pintar(it); });
+  form.addEventListener('change', function (e) { var it = e.target.closest('[data-item]'); if (it) pintar(it); });
+})();
+</script>
+{% endblock %}

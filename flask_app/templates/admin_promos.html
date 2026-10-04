@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+{% block title %}Promos · {{ negocio.nombre }}{% endblock %}
+{% block descripcion %}Promociones de la portada.{% endblock %}
+
+{% block head_extra %}
+<style>
+  .promoadm { display: grid; gap: var(--sp-5); margin-top: var(--sp-6); }
+  .promoadm__caja {
+    background: var(--surface-card); border: var(--bw) solid var(--border);
+    border-radius: var(--r-md); padding: var(--sp-5);
+  }
+  .promoadm__tit { font-family: var(--font-display); font-size: 1.25rem;
+    color: var(--lp-espresso); margin: 0 0 var(--sp-2); }
+
+  .campos { display: grid; gap: var(--sp-3); }
+  @media (min-width: 720px) { .campos--dos { grid-template-columns: 1fr 1fr; } }
+  .campo { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .campo__label { font-size: .78rem; font-weight: var(--fw-semibold); color: var(--lp-espresso); }
+  .campo__hint { font-size: .72rem; color: var(--text-muted); }
+  .campo input, .campo textarea {
+    font-family: var(--font-body); font-size: .9rem; padding: 10px 12px;
+    border-radius: var(--r-md); border: var(--bw-strong) solid var(--border-strong);
+    background: var(--surface-page); color: var(--text-strong); width: 100%;
+    box-sizing: border-box;
+  }
+  .campo input:focus, .campo textarea:focus {
+    outline: none; border-color: var(--lp-forest);
+    box-shadow: var(--shadow-focus);
+  }
+
+  .atajos { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .atajo {
+    font: inherit; font-size: .72rem; font-weight: var(--fw-semibold);
+    padding: 5px 11px; border-radius: var(--r-pill); cursor: pointer;
+    background: var(--surface-sand); color: var(--lp-coffee-600);
+    border: var(--bw) solid var(--border);
+  }
+  .atajo:hover { border-color: var(--lp-forest); }
+
+  .fila {
+    display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3);
+    justify-content: space-between;
+    padding: var(--sp-4) 0; border-bottom: var(--bw) solid var(--divider);
+  }
+  .fila:last-of-type { border-bottom: 0; }
+  .fila__quien { min-width: 0; flex: 1 1 260px; }
+  .fila__nombre { font-weight: var(--fw-bold); color: var(--lp-espresso); overflow-wrap: anywhere; }
+  .fila__cuando { font-size: .76rem; color: var(--text-muted); }
+  .fila__acciones { display: flex; flex-wrap: wrap; gap: 6px; }
+  .fila__acciones form { margin: 0; }
+
+  .chip {
+    display: inline-block; font-size: .68rem; font-weight: var(--fw-bold);
+    letter-spacing: .06em; text-transform: uppercase;
+    padding: 3px 10px; border-radius: var(--r-pill);
+  }
+  .chip--activa     { background: rgba(60,122,78,.16); color: #2A6B3D; }
+  .chip--programada { background: var(--lp-gold-bg); color: #9B0D23; }
+  .chip--pausada    { background: rgba(178,59,46,.13); color: var(--lp-danger); }
+  .chip--terminada  { background: var(--surface-sand); color: var(--text-muted); }
+
+  details.editar { margin-top: var(--sp-3); }
+  details.editar > summary {
+    cursor: pointer; font-size: .78rem; font-weight: var(--fw-semibold);
+    color: var(--lp-forest); list-style: none;
+  }
+  details.editar > summary::-webkit-details-marker { display: none; }
+  details.editar > summary::before { content: "✎ "; }
+  details.editar[open] > summary::before { content: "▾ "; }
+  details.editar > div { margin-top: var(--sp-3); }
+</style>
+{% endblock %}
+
+{% block contenido %}
+<main class="section"><div class="container" style="max-width:860px">
+  <div class="auth__eyebrow">Administración</div>
+  <h1 style="margin:6px 0 0">Promos de la portada</h1>
+  <p style="color:var(--text-muted);margin:var(--sp-2) 0 0;max-width:62ch">
+    Se muestra <b>una sola</b> a la vez: la vigente de mayor prioridad. Cuando
+    se cumple el plazo, el banner se retira solo de la portada.
+  </p>
+
+  <div class="promoadm">
+
+    {# ---------------------------------------------------------- crear #}
+    <section class="promoadm__caja">
+      <h2 class="promoadm__tit">Cargar una promo</h2>
+      <form method="POST" action="{{ url_for('admin_promos_crear') }}" id="formCrear">
+        <input type="hidden" name="csrf" value="{{ csrf_actual() }}" />
+        <div class="campos">
+
+          <div class="campo">
+            <label class="campo__label" for="nombre">Nombre</label>
+            <input id="nombre" name="nombre" maxlength="{{ largo_nombre }}"
+                   placeholder="20 % en tintas" required />
+            <span class="campo__hint">Es el titular del banner.</span>
+          </div>
+
+          <div class="campo">
+            <label class="campo__label" for="bajada">Letra chica</label>
+            <input id="bajada" name="bajada" maxlength="{{ largo_bajada }}"
+                   placeholder="De lunes a jueves, después de las 16:00." />
+            <span class="campo__hint">Opcional. Días, horario, condiciones.</span>
+          </div>
+
+          <div class="campos campos--dos">
+            <div class="campo">
+              <label class="campo__label" for="inicio">Empieza</label>
+              <input id="inicio" name="inicio" type="datetime-local" required
+                     value="{{ tiempo.para_formulario(tiempo.ahora_utc()) }}" />
+              <span class="campo__hint">Hora de Chile. Déjalo como está para que parta ahora.</span>
+            </div>
+            <div class="campo">
+              <label class="campo__label" for="fin">Termina</label>
+              <input id="fin" name="fin" type="datetime-local" required />
+              {# Los atajos rellenan la fecha; lo que se guarda es siempre una
+                 fecha, nunca «dura 24 horas». Así editar el texto mañana no
+                 reinicia el plazo. #}
+              <div class="atajos">
+                <button class="atajo" type="button" data-horas="24">24 horas</button>
+                <button class="atajo" type="button" data-horas="72">3 días</button>
+                <button class="atajo" type="button" data-horas="168">1 semana</button>
+                <button class="atajo" type="button" data-domingo="1">Hasta el domingo</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="campos campos--dos">
+            <div class="campo">
+              <label class="campo__label" for="boton_texto">Texto del botón</label>
+              <input id="boton_texto" name="boton_texto" maxlength="{{ largo_boton }}"
+                     placeholder="Ver el catálogo" />
+            </div>
+            <div class="campo">
+              <label class="campo__label" for="boton_destino">A dónde lleva</label>
+              <input id="boton_destino" name="boton_destino" maxlength="{{ largo_destino }}"
+                     placeholder="#carta" />
+              <span class="campo__hint">
+                Solo secciones de este sitio: <code>#carta</code>, <code>#tienda</code>,
+                <code>/muro</code>. Los dos campos, o ninguno.
+              </span>
+            </div>
+          </div>
+
+          <div class="campo" style="max-width:200px">
+            <label class="campo__label" for="prioridad">Prioridad</label>
+            <input id="prioridad" name="prioridad" type="number" value="0" min="-99" max="99" />
+            <span class="campo__hint">Si hay dos vigentes, gana la más alta.</span>
+          </div>
+
+          <div><button class="btn btn--primary" type="submit">Cargar promo</button></div>
+        </div>
+      </form>
+    </section>
+
+    {# --------------------------------------------------------- listado #}
+    <section class="promoadm__caja">
+      <h2 class="promoadm__tit">Cargadas</h2>
+
+      {% if not promos %}
+      <p style="color:var(--text-muted);margin:0">
+        Todavía no hay ninguna. La portada se ve igual que siempre.
+      </p>
+      {% endif %}
+
+      {% for p in promos %}
+      <div class="fila">
+        <div class="fila__quien">
+          <span class="chip chip--{{ p.estado }}">{{ p.estado }}</span>
+          <div class="fila__nombre">{{ p.nombre }}</div>
+          <div class="fila__cuando">
+            {{ tiempo.corto(p.inicio_at) }} → {{ tiempo.corto(p.fin_at) }}
+            {% if p.prioridad %} · prioridad {{ p.prioridad }}{% endif %}
+          </div>
+        </div>
+        <div class="fila__acciones">
+          <form method="POST" action="{{ url_for('admin_promos_interruptor', promo_id=p.id) }}">
+            <input type="hidden" name="csrf" value="{{ csrf_actual() }}" />
+            <input type="hidden" name="encender" value="{{ '0' if p.activa else '1' }}" />
+            <button class="btn btn--outline btn--sm" type="submit">
+              {{ 'Bajar de la portada' if p.activa else 'Reponer' }}
+            </button>
+          </form>
+          <form method="POST" action="{{ url_for('admin_promos_eliminar', promo_id=p.id) }}"
+                onsubmit="return confirm('¿Eliminar «{{ p.nombre }}»? No se puede deshacer.')">
+            <input type="hidden" name="csrf" value="{{ csrf_actual() }}" />
+            <button class="btn btn--outline btn--sm" type="submit">Eliminar</button>
+          </form>
+        </div>
+
+        <details class="editar" style="flex-basis:100%">
+          <summary>Editar</summary>
+          <div>
+            <form method="POST" action="{{ url_for('admin_promos_actualizar', promo_id=p.id) }}">
+              <input type="hidden" name="csrf" value="{{ csrf_actual() }}" />
+              <div class="campos">
+                <div class="campo">
+                  <label class="campo__label">Nombre</label>
+                  <input name="nombre" maxlength="{{ largo_nombre }}" value="{{ p.nombre }}" required />
+                </div>
+                <div class="campo">
+                  <label class="campo__label">Letra chica</label>
+                  <input name="bajada" maxlength="{{ largo_bajada }}" value="{{ p.bajada or '' }}" />
+                </div>
+                <div class="campos campos--dos">
+                  <div class="campo">
+                    <label class="campo__label">Empieza</label>
+                    <input name="inicio" type="datetime-local" required
+                           value="{{ tiempo.para_formulario(p.inicio_at) }}" />
+                  </div>
+                  <div class="campo">
+                    <label class="campo__label">Termina</label>
+                    <input name="fin" type="datetime-local" required
+                           value="{{ tiempo.para_formulario(p.fin_at) }}" />
+                  </div>
+                </div>
+                <div class="campos campos--dos">
+                  <div class="campo">
+                    <label class="campo__label">Texto del botón</label>
+                    <input name="boton_texto" maxlength="{{ largo_boton }}" value="{{ p.boton_texto or '' }}" />
+                  </div>
+                  <div class="campo">
+                    <label class="campo__label">A dónde lleva</label>
+                    <input name="boton_destino" maxlength="{{ largo_destino }}" value="{{ p.boton_destino or '' }}" />
+                  </div>
+                </div>
+                <div class="campo" style="max-width:200px">
+                  <label class="campo__label">Prioridad</label>
+                  <input name="prioridad" type="number" value="{{ p.prioridad }}" min="-99" max="99" />
+                </div>
+                <div><button class="btn btn--primary btn--sm" type="submit">Guardar cambios</button></div>
+              </div>
+            </form>
+          </div>
+        </details>
+      </div>
+      {% endfor %}
+    </section>
+
+  </div>
+</div></main>
+{% endblock %}
+
+{% block page_js %}
+<script>
+/* Los atajos solo rellenan el campo de término: se calculan desde lo que diga
+   «Empieza», no desde el reloj, para que mover el inicio arrastre el fin. */
+(function () {
+  "use strict";
+  var inicio = document.getElementById('inicio');
+  var fin = document.getElementById('fin');
+  if (!inicio || !fin) { return; }
+
+  function desdeInicio() {
+    var d = new Date(inicio.value);
+    return isNaN(d.getTime()) ? new Date() : d;
+  }
+
+  function escribir(d) {
+    /* El input quiere hora local sin zona; toISOString devuelve UTC y
+       correría el valor varias horas. */
+    var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+    fin.value = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+              + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+
+  document.querySelectorAll('.atajo').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var d = desdeInicio();
+      if (b.dataset.horas) {
+        d.setHours(d.getHours() + parseInt(b.dataset.horas, 10));
+      } else {
+        /* Hasta el domingo a las 20:00. Si hoy YA es domingo, vale el de hoy
+           salvo que ya hayan pasado las 20:00. */
+        var faltan = (7 - d.getDay()) % 7;
+        if (faltan === 0 && d.getHours() >= 20) { faltan = 7; }
+        d.setDate(d.getDate() + faltan);
+        d.setHours(20, 0, 0, 0);
+      }
+      escribir(d);
+    });
+  });
+
+  if (!fin.value) {
+    var d = desdeInicio();
+    d.setHours(d.getHours() + 24);
+    escribir(d);
+  }
+})();
+</script>
+{% endblock %}

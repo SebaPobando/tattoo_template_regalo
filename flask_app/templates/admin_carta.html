@@ -1,0 +1,544 @@
+{% extends "base.html" %}
+{% block title %}Catálogo de {{ marca.nombre }} · Administración{% endblock %}
+{% block descripcion %}Administración del catálogo de {{ marca.nombre }}.{% endblock %}
+
+{% block head_extra %}
+<style>
+  /* Estilos propios del admin. Usan los tokens del sistema de diseño, así que
+     si cambias la paleta en tokens/colors.css esta pantalla cambia con ella. */
+  .adm__cab { display:flex; flex-wrap:wrap; gap:var(--sp-3); align-items:baseline;
+    justify-content:space-between; margin-bottom:var(--sp-5) }
+  .adm__resumen { color:var(--text-muted); font-size:.9rem }
+  .adm__cat { margin-bottom:var(--sp-7) }
+  .adm__cat-tit { display:flex; align-items:baseline; gap:var(--sp-3);
+    margin-bottom:var(--sp-4); padding-bottom:var(--sp-2);
+    border-bottom:var(--bw) solid var(--border) }
+  .adm__cat-n { color:var(--text-muted); font-size:.85rem; font-weight:var(--fw-regular) }
+
+  .fila { display:grid; gap:var(--sp-3); padding:var(--sp-4);
+    border:var(--bw) solid var(--border); border-radius:var(--r-md);
+    background:var(--surface-card); margin-bottom:var(--sp-3) }
+  .fila--off { opacity:.55 }
+  .fila__l1 { display:grid; gap:var(--sp-3); grid-template-columns:1fr }
+  .fila__l2 { display:grid; gap:var(--sp-3); grid-template-columns:1fr }
+  @media (min-width:820px) {
+    .fila__l1 { grid-template-columns:2fr 115px 115px 145px 85px }
+    .fila__l2 { grid-template-columns:1fr 200px auto }
+  }
+  .campo { display:flex; flex-direction:column; gap:4px }
+  .campo__et { font-size:.7rem; text-transform:uppercase; letter-spacing:.08em;
+    color:var(--text-muted); font-weight:var(--fw-semibold) }
+  .campo input, .campo select, .campo textarea {
+    font:inherit; font-size:.9rem; padding:9px 11px; border-radius:var(--r-sm);
+    border:var(--bw) solid var(--border-strong); background:var(--surface-page);
+    color:var(--text-body); width:100% }
+  .campo textarea { resize:vertical; min-height:38px }
+  .campo input:focus, .campo select:focus, .campo textarea:focus {
+    outline:2px solid var(--accent); outline-offset:1px }
+
+  .fila__pie { display:flex; flex-wrap:wrap; gap:var(--sp-3); align-items:center }
+
+  .interruptor { display:inline-flex; align-items:center; gap:8px; cursor:pointer;
+    border:var(--bw) solid var(--border-strong); background:var(--surface-page);
+    border-radius:var(--r-pill); padding:7px 14px; font-size:.82rem;
+    font-weight:var(--fw-semibold); color:var(--text-body) }
+  .interruptor__luz { width:9px; height:9px; border-radius:50%; background:#C0392B }
+  .interruptor[aria-pressed="true"] .interruptor__luz { background:var(--lp-forest) }
+  .interruptor:disabled { opacity:.5; cursor:wait }
+
+  /* --- Pestañas de marca ---
+     {{ negocio.nombre_corto }} y {{ negocio.segunda.nombre }} son dos sociedades distintas, con RUT distinto.
+     Que se vea de un vistazo en cuál estás parado no es estética: es evitar
+     que edites la carta equivocada. */
+  .marcas { display:flex; gap:var(--sp-2); flex-wrap:wrap;
+    border-bottom:var(--bw) solid var(--border); margin-bottom:var(--sp-5) }
+  .marcas__tab { padding:10px 18px; text-decoration:none; font-size:.9rem;
+    font-weight:var(--fw-semibold); color:var(--text-muted);
+    border-bottom:3px solid transparent; margin-bottom:-1px }
+  .marcas__tab:hover { color:var(--text-body) }
+  .marcas__tab--viva { color:var(--lp-espresso); border-bottom-color:var(--lp-forest) }
+
+  /* --- Buscador ---
+     Se queda pegado bajo el header (que es fixed, 68px) porque con 60 productos
+     escribes, bajas a mirar, y si la barra se fue arriba ya no puedes corregir
+     la búsqueda sin volver a subir. */
+  .buscar { position:sticky; top:68px; z-index:20;
+    background:var(--surface-page); padding:var(--sp-4) 0 var(--sp-3);
+    margin-bottom:var(--sp-5) }
+  .buscar__caja { position:relative; display:flex; align-items:center; gap:var(--sp-3);
+    flex-wrap:wrap }
+  .buscar__campo { position:relative; flex:1 1 280px }
+  .buscar__campo input { font:inherit; font-size:.95rem; width:100%;
+    padding:11px 42px 11px 16px; border-radius:var(--r-pill);
+    border:var(--bw-strong) solid var(--border-strong);
+    background:var(--surface-card); color:var(--text-body) }
+  .buscar__campo input:focus { outline:2px solid var(--accent); outline-offset:1px }
+  /* Chrome/Safari dibujan su propia "x" en los input[type=search]. La sacamos:
+     si no, quedan dos botones de limpiar pegados uno al lado del otro. */
+  .buscar__campo input::-webkit-search-cancel-button,
+  .buscar__campo input::-webkit-search-decoration { -webkit-appearance:none; appearance:none }
+  .buscar__limpiar { position:absolute; right:6px; top:50%; transform:translateY(-50%);
+    width:30px; height:30px; border:none; border-radius:50%; cursor:pointer;
+    background:transparent; color:var(--text-muted); font-size:1.1rem; line-height:1 }
+  .buscar__limpiar:hover { background:var(--surface-sand); color:var(--text-body) }
+  .buscar__cuenta { font-size:.85rem; color:var(--text-muted); white-space:nowrap }
+  .buscar__cuenta b { color:var(--lp-espresso); font-weight:var(--fw-semibold) }
+  .buscar__pista { font-size:.75rem; color:var(--text-muted) }
+  /* El header es fixed también en móvil, así que el tope sigue siendo 68px:
+     con top:0 la barra se pega DEBAJO del header y no se ve. La pista de
+     atajos se esconde porque en un teléfono no hay teclado. */
+  @media (max-width:600px) {
+    .buscar { padding:var(--sp-3) 0 var(--sp-2) }
+    .buscar__pista { display:none }
+  }
+
+  /* Etiqueta visible solo para lectores de pantalla: el placeholder no es una
+     etiqueta accesible, desaparece apenas escribes. */
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+    overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0 }
+
+  kbd { font:inherit; font-size:.7rem; padding:1px 5px; border-radius:4px;
+    border:var(--bw) solid var(--border-strong); background:var(--surface-card) }
+
+  .vacio { text-align:center; padding:var(--sp-7) var(--sp-4);
+    border:var(--bw) dashed var(--border-strong); border-radius:var(--r-md);
+    color:var(--text-muted) }
+  [hidden] { display:none !important }
+
+  .adm__nuevo { border:var(--bw) dashed var(--border-strong);
+    border-radius:var(--r-md); padding:var(--sp-5); background:var(--surface-sand) }
+  details.adm__nuevo > summary { cursor:pointer; font-weight:var(--fw-semibold); list-style:none }
+  details.adm__nuevo > summary::-webkit-details-marker { display:none }
+  .peligro { color:#A33A2E; background:none; border:none; cursor:pointer;
+    font:inherit; font-size:.82rem; text-decoration:underline; padding:0 }
+
+  /* La lista de categorias que ya existen, dentro del mismo bloque. */
+  .cats { display:grid; gap:var(--sp-3); margin-top:var(--sp-5) }
+  .cats__tit { font-size:.8rem; color:var(--text-muted); margin:0 }
+  .cats__fila { display:flex; flex-wrap:wrap; gap:var(--sp-2); align-items:flex-end }
+  /* El flex va en el .campo, NUNCA en el input: .campo es un flex en COLUMNA,
+     asi que un flex-grow sobre el input lo estira a lo ALTO, no a lo ancho. */
+  .cats__campo { flex:1 1 210px; min-width:0 }
+  .cats__campo--orden { flex:0 0 auto }
+  .cats__campo--orden input { width:88px }
+  .cats__n { font-size:.76rem; color:var(--text-muted); white-space:nowrap;
+    padding-bottom:9px }
+</style>
+{% endblock %}
+
+{% block contenido %}
+<main class="section"><div class="container">
+
+  {# ---------- Selector de marca ----------
+     Solo aparece si hay más de una. Con una sola marca, unas pestañas con
+     una pestaña son ruido. #}
+  {% if marcas|length > 1 %}
+  <nav class="marcas" aria-label="Elegir la marca">
+    {% for m in marcas if negocio.segunda.activa or m.slug != negocio.segunda.slug %}
+    <a class="marcas__tab {{ 'marcas__tab--viva' if m.slug == marca.slug }}"
+       href="{{ url_for('admin_carta', marca_slug=m.slug) }}"
+       {{ 'aria-current=page' if m.slug == marca.slug }}>{{ m.nombre }}</a>
+    {% endfor %}
+  </nav>
+  {% endif %}
+
+  <div class="adm__cab">
+    <div>
+      <div class="auth__eyebrow">Administración</div>
+      <h1 style="margin:6px 0 0">Catálogo de {{ marca.nombre }}</h1>
+      <p class="adm__resumen" style="margin:6px 0 0">
+        {{ total }} producto{{ 's' if total != 1 }} ·
+        {{ apagados }} no disponible{{ 's' if apagados != 1 }}
+      </p>
+    </div>
+    {# Solo {{ negocio.nombre_corto }} tiene página pública todavía. Ofrecer el enlace en una
+       marca que no la tiene es prometer algo que no está. #}
+    {% if marca.slug == negocio.slug %}
+    <a class="btn btn--outline btn--sm" href="{{ url_for('home') }}#carta">Ver el catálogo público</a>
+    {% endif %}
+  </div>
+
+  <p style="margin:var(--sp-4) 0 0;font-size:.88rem">
+    ¿Quieres armar una promo con varios productos a un precio?
+    <a href="{{ url_for('admin_combos', marca_slug=marca.slug) }}">Packs del catálogo</a>.
+  </p>
+
+  {# ---------- Categorias ----------
+     Va ANTES del bloque de productos porque ese es el orden real de trabajo:
+     sin una categoria donde ponerlo, el formulario de producto no sirve de
+     mucho. Se abre solo cuando todavia no hay ninguna. #}
+  <details class="adm__nuevo" style="margin-bottom:var(--sp-5)"
+           {{ 'open' if not categorias }}>
+    <summary>+ Agregar una categoría</summary>
+
+    <form method="POST" class="cats__fila" style="margin-top:var(--sp-4)"
+          action="{{ url_for('admin_categoria_crear', marca_slug=marca.slug) }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+      <div class="campo cats__campo">
+        <label class="campo__et" for="cat-nombre">Nombre de la categoría</label>
+        <input id="cat-nombre" name="nombre" maxlength="100" required
+               placeholder="Cartuchos" />
+      </div>
+      <div class="campo cats__campo cats__campo--orden">
+        <label class="campo__et" for="cat-orden"
+               title="Más chico aparece antes en el catálogo. Vacío la deja al final.">Orden</label>
+        <input id="cat-orden" name="orden" type="number" placeholder="al final" />
+      </div>
+      <button class="btn btn--primary btn--sm" type="submit">Crear categoría</button>
+    </form>
+
+    {% if categorias %}
+    <div class="cats">
+      <p class="cats__tit">
+        Las que ya existen — cambia el nombre o el orden y guarda. El orden
+        más chico aparece antes en el catálogo.
+      </p>
+      {% for c in categorias %}
+      <form method="POST" class="cats__fila"
+            action="{{ url_for('admin_categoria_actualizar', marca_slug=marca.slug, categoria_id=c.id) }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+        <div class="campo cats__campo">
+          <label class="campo__et" for="cat-n-{{ c.id }}">Nombre</label>
+          <input id="cat-n-{{ c.id }}" name="nombre" maxlength="100" required
+                 value="{{ c.nombre }}" />
+        </div>
+        <div class="campo cats__campo cats__campo--orden">
+          <label class="campo__et" for="cat-o-{{ c.id }}">Orden</label>
+          <input id="cat-o-{{ c.id }}" name="orden" type="number" value="{{ c.orden }}" />
+        </div>
+        {% set n = productos_por_categoria.get(c.id, 0) %}
+        <span class="cats__n">{{ n }} producto{{ 's' if n != 1 }}</span>
+        <button class="btn btn--sm" type="submit">Guardar</button>
+      </form>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </details>
+
+  {# ---------- Agregar ---------- #}
+  <details class="adm__nuevo" style="margin-bottom:var(--sp-7)" {{ 'open' if total == 0 }}>
+    <summary>+ Agregar un producto</summary>
+    <form method="POST" style="margin-top:var(--sp-4)"
+          action="{{ url_for('admin_carta_crear', marca_slug=marca.slug) }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+      <div class="fila__l1">
+        <div class="campo">
+          <label class="campo__et" for="n-nombre">Nombre</label>
+          <input id="n-nombre" name="nombre" maxlength="150" required placeholder="Nombre del producto" />
+        </div>
+        <div class="campo">
+          <label class="campo__et" for="n-precio">Precio CLP</label>
+          <input id="n-precio" name="precio_clp" type="number" min="0" step="1" value="0" />
+        </div>
+        <div class="campo">
+          <label class="campo__et" for="n-ind"
+                 title="Segundo precio opcional (por ejemplo, unidad suelta). Vacío si tiene un solo precio.">2º precio</label>
+          <input id="n-ind" name="precio_individual_clp" type="number" min="0" step="1" placeholder="—" />
+        </div>
+        <div class="campo">
+          <label class="campo__et" for="n-cat">Categoría</label>
+          <select id="n-cat" name="categoria_id">
+            {% for c in categorias %}<option value="{{ c.id }}">{{ c.nombre }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="campo">
+          <label class="campo__et" for="n-orden">Orden</label>
+          <input id="n-orden" name="orden" type="number" value="99" />
+        </div>
+      </div>
+      <div class="fila__l2" style="margin-top:var(--sp-3)">
+        <div class="campo">
+          <label class="campo__et" for="n-desc">Descripción</label>
+          <input id="n-desc" name="descripcion" maxlength="2000" />
+        </div>
+        <div class="campo">
+          <label class="campo__et" for="n-etq">Etiqueta</label>
+          <input id="n-etq" name="etiqueta" maxlength="30" placeholder="Favorito" />
+        </div>
+        <div class="campo" style="justify-content:flex-end">
+          <label style="display:flex;gap:7px;align-items:center;font-size:.85rem">
+            <input type="checkbox" name="disponible" checked style="width:auto" /> Disponible
+          </label>
+        </div>
+      </div>
+      <button class="btn btn--primary btn--sm" type="submit" style="margin-top:var(--sp-4)">
+        Agregar al catálogo
+      </button>
+    </form>
+  </details>
+
+  {# ---------- Buscador ----------
+     Con la carta vacía no hay nada que filtrar: sería un campo que no hace nada. #}
+  {% if total %}
+  <div class="buscar">
+    <div class="buscar__caja">
+      <div class="buscar__campo">
+        <label class="sr-only" for="q">Buscar en el catálogo</label>
+        <input id="q" type="search" autocomplete="off" spellcheck="false"
+               placeholder="Buscar por nombre, descripción o etiqueta…" />
+        <button class="buscar__limpiar" type="button" id="q-limpiar" hidden
+                title="Limpiar" aria-label="Limpiar la búsqueda">&times;</button>
+      </div>
+      <span class="buscar__cuenta" id="q-cuenta" aria-live="polite"></span>
+      <span class="buscar__pista">Atajo: <kbd>/</kbd> para buscar, <kbd>Esc</kbd> para limpiar</span>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ---------- Los productos ---------- #}
+  {% for g in grupos %}
+  <section class="adm__cat" data-categoria>
+    <div class="adm__cat-tit">
+      <h2 style="font-size:1.15rem;margin:0">{{ g.nombre }}</h2>
+      <span class="adm__cat-n" data-cuenta-cat>{{ g["items"]|length }} ítems</span>
+    </div>
+
+    {% for p in g["items"] %}
+    <form class="fila {{ '' if p.disponible else 'fila--off' }}" id="fila-{{ p.id }}"
+          data-producto data-categoria-nombre="{{ g.nombre }}"
+          method="POST" action="{{ url_for('admin_carta_actualizar', marca_slug=marca.slug, producto_id=p.id) }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+
+      <div class="fila__l1">
+        <div class="campo">
+          <label class="campo__et" for="nom-{{ p.id }}">Nombre</label>
+          <input id="nom-{{ p.id }}" name="nombre" value="{{ p.nombre }}" maxlength="150" required />
+        </div>
+        <div class="campo">
+          <label class="campo__et" for="pre-{{ p.id }}">Precio CLP</label>
+          <input id="pre-{{ p.id }}" name="precio_clp" type="number" min="0" step="1"
+                 value="{{ p.precio_clp }}" />
+        </div>
+        <div class="campo">
+          {# Vacío significa «este producto tiene un solo precio», que es el caso
+             de toda la cafetería. Un 0 significaría que sale gratis. #}
+          <label class="campo__et" for="ind-{{ p.id }}"
+                 title="Segundo precio opcional (por ejemplo, unidad suelta). Déjalo vacío si el producto tiene un solo precio.">2º precio</label>
+          <input id="ind-{{ p.id }}" name="precio_individual_clp" type="number" min="0" step="1"
+                 value="{{ p.precio_individual_clp if p.precio_individual_clp is not none }}"
+                 placeholder="—" />
+        </div>
+        <div class="campo">
+          <label class="campo__et" for="cat-{{ p.id }}">Categoría</label>
+          <select id="cat-{{ p.id }}" name="categoria_id">
+            {% for c in categorias %}
+            <option value="{{ c.id }}" {{ 'selected' if c.id == p.categoria_id }}>{{ c.nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="campo">
+          <label class="campo__et" for="ord-{{ p.id }}">Orden</label>
+          <input id="ord-{{ p.id }}" name="orden" type="number" value="{{ p.orden }}" />
+        </div>
+      </div>
+
+      <div class="fila__l2">
+        <div class="campo">
+          <label class="campo__et" for="des-{{ p.id }}">Descripción</label>
+          <textarea id="des-{{ p.id }}" name="descripcion" maxlength="2000" rows="1">{{ p.descripcion or '' }}</textarea>
+        </div>
+        <div class="campo">
+          <label class="campo__et" for="etq-{{ p.id }}">Etiqueta</label>
+          <input id="etq-{{ p.id }}" name="etiqueta" value="{{ p.etiqueta or '' }}" maxlength="30" />
+        </div>
+        <div class="campo">
+          <label class="campo__et" for="img-{{ p.id }}">Imagen (URL)</label>
+          <input id="img-{{ p.id }}" name="imagen_url" value="{{ p.imagen_url or '' }}"
+                 maxlength="255" placeholder="https://…" />
+        </div>
+      </div>
+
+      <div class="fila__pie">
+        {# El interruptor va fuera del envío del formulario: guarda solo, por fetch #}
+        <button type="button" class="interruptor" data-toggle="{{ p.id }}"
+                aria-pressed="{{ 'true' if p.disponible else 'false' }}">
+          <span class="interruptor__luz"></span>
+          <span data-etiqueta>{{ 'Disponible' if p.disponible else 'No disponible' }}</span>
+        </button>
+        {# Espejo del estado, para que al guardar la fila no se pierda #}
+        <input type="checkbox" name="disponible" hidden data-espejo="{{ p.id }}"
+               {{ 'checked' if p.disponible }} />
+
+        <button class="btn btn--primary btn--sm" type="submit">Guardar</button>
+
+        <button class="peligro" type="submit" form="borrar-{{ p.id }}"
+                data-nombre="{{ p.nombre }}">Eliminar</button>
+      </div>
+    </form>
+
+    {# Formulario aparte: un form no puede ir dentro de otro #}
+    <form id="borrar-{{ p.id }}" method="POST" hidden
+          action="{{ url_for('admin_carta_eliminar', marca_slug=marca.slug, producto_id=p.id) }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+    </form>
+    {% endfor %}
+  </section>
+  {% else %}
+  <div class="vacio">
+    <p style="margin:0 0 var(--sp-2)">
+      <b>{{ marca.nombre }}</b> todavía no tiene productos en el catálogo.
+    </p>
+    <p style="margin:0;font-size:.85rem">
+      Agrega el primero con «+ Agregar un producto», acá arriba.
+      {% if categorias %}
+        Categorías listas: {{ categorias|map(attribute='nombre')|join(' · ') }}.
+      {% else %}
+        Ojo: esta marca tampoco tiene categorías todavía — crea una con
+        «+ Agregar una categoría», más arriba.
+      {% endif %}
+    </p>
+  </div>
+  {% endfor %}
+
+  <div class="vacio" id="q-sin-resultados" hidden>
+    <p style="margin:0 0 var(--sp-2)">Ningún producto coincide con <b id="q-eco"></b>.</p>
+    <button class="btn btn--outline btn--sm" type="button" id="q-limpiar-2">Ver todo el catálogo</button>
+  </div>
+
+</div></main>
+{% endblock %}
+
+{% block page_js %}
+<script>
+(function () {
+  'use strict';
+  var CSRF = {{ csrf_token|tojson }};
+  // La marca va en la URL del toggle: el servidor comprueba que el producto
+  // sea de esta marca antes de tocarlo.
+  var MARCA = {{ marca.slug|tojson }};
+
+  // --- Apagar / prender de un click, sin recargar la página ---
+  document.querySelectorAll('[data-toggle]').forEach(function (boton) {
+    boton.addEventListener('click', function () {
+      var id = boton.dataset.toggle;
+      boton.disabled = true;
+
+      var cuerpo = new FormData();
+      cuerpo.append('csrf', CSRF);
+
+      fetch('/admin/carta/' + MARCA + '/' + id + '/disponible',
+            { method: 'POST', body: cuerpo })
+        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function (d) {
+          boton.setAttribute('aria-pressed', d.disponible ? 'true' : 'false');
+          boton.querySelector('[data-etiqueta]').textContent =
+            d.disponible ? 'Disponible' : 'No disponible';
+          document.getElementById('fila-' + id).classList.toggle('fila--off', !d.disponible);
+          // El espejo mantiene el estado si después guardas la fila entera
+          document.querySelector('[data-espejo="' + id + '"]').checked = d.disponible;
+        })
+        .catch(function (err) {
+          alert('No se pudo cambiar la disponibilidad: ' + err.message);
+        })
+        .finally(function () { boton.disabled = false; });
+    });
+  });
+
+  // ------------------------------------------------------------------
+  // Buscador
+  //
+  // Filtra en el navegador, no en el servidor: los 60 productos ya están
+  // en la página, así que buscar es instantáneo y no hay que recargar ni
+  // perder lo que estabas editando. Si algún día la carta pasa de unos
+  // cientos, esto se cambia por una consulta con LIMIT.
+  // ------------------------------------------------------------------
+  var caja       = document.getElementById('q');
+  var cuenta     = document.getElementById('q-cuenta');
+  var limpiar    = document.getElementById('q-limpiar');
+  var limpiar2   = document.getElementById('q-limpiar-2');
+  var sinNada    = document.getElementById('q-sin-resultados');
+  var eco        = document.getElementById('q-eco');
+  var filas      = [].slice.call(document.querySelectorAll('[data-producto]'));
+  var categorias = [].slice.call(document.querySelectorAll('[data-categoria]'));
+
+  // Sin acentos y en minúsculas: en español es obligatorio. Si "cafe" no
+  // encuentra "Café", el buscador no sirve. NFD separa la letra de su tilde
+  // ("é" pasa a ser "e" + tilde suelta) y el rango U+0300–U+036F borra esas
+  // tildes sueltas. De paso "nino" encuentra "Niño".
+  function normalizar(texto) {
+    return (texto || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+
+  // Se lee del INPUT, no de lo que renderizó el servidor: si renombraste un
+  // producto y todavía no guardas, el buscador ve el nombre nuevo.
+  function pajar(fila) {
+    var partes = [fila.dataset.categoriaNombre];
+    ['nombre', 'descripcion', 'etiqueta'].forEach(function (campo) {
+      var el = fila.querySelector('[name="' + campo + '"]');
+      if (el) partes.push(el.value);
+    });
+    return normalizar(partes.join(' '));
+  }
+
+  function filtrar() {
+    var consulta = normalizar(caja.value.trim());
+    // Varias palabras = todas tienen que estar. "cafe frio" no trae todos
+    // los cafés, trae los fríos.
+    var terminos = consulta ? consulta.split(/\s+/) : [];
+    var visibles = 0;
+
+    filas.forEach(function (fila) {
+      var texto = terminos.length ? pajar(fila) : '';
+      var calza = terminos.every(function (t) { return texto.indexOf(t) !== -1; });
+      fila.hidden = !calza;
+      // El formulario de borrado va aparte y ya está oculto: no se toca.
+      if (calza) visibles++;
+    });
+
+    // Una categoría sin coincidencias se esconde entera, con su título.
+    categorias.forEach(function (seccion) {
+      var suyas = [].slice.call(seccion.querySelectorAll('[data-producto]'));
+      var cuantas = suyas.filter(function (f) { return !f.hidden; }).length;
+      seccion.hidden = cuantas === 0;
+      var etq = seccion.querySelector('[data-cuenta-cat]');
+      if (etq) etq.textContent = cuantas + (cuantas === 1 ? ' ítem' : ' ítems');
+    });
+
+    limpiar.hidden = !caja.value;
+    sinNada.hidden = !(terminos.length && visibles === 0);
+    if (!sinNada.hidden) eco.textContent = '«' + caja.value.trim() + '»';
+    // El plural concuerda con el TOTAL, no con los encontrados:
+    // "1 de 60 productos", nunca "1 de 60 producto".
+    cuenta.textContent = terminos.length
+      ? visibles + ' de ' + filas.length + (filas.length === 1 ? ' producto' : ' productos')
+      : '';
+  }
+
+  function borrarBusqueda() {
+    caja.value = '';
+    filtrar();
+    caja.focus();
+  }
+
+  if (caja) {
+    caja.addEventListener('input', filtrar);
+    limpiar.addEventListener('click', borrarBusqueda);
+    limpiar2.addEventListener('click', borrarBusqueda);
+
+    caja.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { e.preventDefault(); borrarBusqueda(); }
+    });
+
+    // "/" enfoca el buscador, salvo que ya estés escribiendo en otro campo.
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
+      var donde = document.activeElement;
+      var etiqueta = donde && donde.tagName;
+      if (etiqueta === 'INPUT' || etiqueta === 'TEXTAREA' || etiqueta === 'SELECT') return;
+      e.preventDefault();
+      caja.focus();
+      caja.select();
+    });
+  }
+
+  // --- Confirmar antes de borrar ---
+  document.querySelectorAll('.peligro').forEach(function (boton) {
+    boton.addEventListener('click', function (e) {
+      if (!confirm('¿Eliminar «' + boton.dataset.nombre + '» del catálogo?\n\nEsto no se puede deshacer. Si solo se acabó, usa el interruptor.')) {
+        e.preventDefault();
+      }
+    });
+  });
+}());
+</script>
+{% endblock %}

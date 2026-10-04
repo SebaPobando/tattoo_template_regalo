@@ -1,0 +1,137 @@
+/* ===========================================================================
+   Plantilla Cafetería — Controles de sesion del header
+   ---------------------------------------------------------------------------
+   Los botones para entrar o registrarse y la pastilla con el nombre de la
+   persona y su menu desplegable: Mi cuenta, Admin y Salir.
+
+   El componente ya existia en account.css pero ninguna plantilla lo usaba, y
+   en el <style> de landing.html habia una SEGUNDA copia huerfana con el
+   prefijo .header__acct-. Se dejo una sola version, en su propio archivo,
+   porque ahora la cargan landing, base y producto. Los botones de sesion
+   tambien viven aca para que mantengan el mismo color en esas tres vistas.
+   =========================================================================== */
+
+/* "Entrar" es la accion principal y por eso usa el verde de marca. Registro
+   queda como alternativa delineada; ambos tratamientos son los mismos en las
+   paginas de cuenta, la portada y cada ficha de producto. */
+.nav__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  border-radius: var(--r-pill);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: var(--fw-bold);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+
+.nav__cta--entrar { background: var(--lp-forest); color: var(--text-on-dark); }
+.nav__cta--entrar:hover { background: var(--accent-hover, #1d3a2c); }
+.nav__cta--registro {
+  border: var(--bw-strong) solid var(--border-strong);
+  background: transparent;
+  color: var(--lp-espresso);
+}
+.nav__cta--registro:hover { background: var(--surface-sand); }
+
+.acct { position: relative; display: inline-flex; align-items: center; }
+
+/* Pastilla verde con texto blanco: es el unico elemento del nav que
+   identifica a la persona, y tiene que leerse distinto a un link. */
+.acct__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 190px;
+  padding: 8px 14px;
+  border: var(--bw-strong) solid transparent;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  color: var(--text-on-dark);
+  font-family: var(--font-body);
+  font-weight: var(--fw-bold);
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.acct__trigger:hover { background: var(--accent-hover); }
+.acct__trigger:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
+
+/* Un nickname largo no puede empujar el resto del header: se corta. */
+.acct__etiqueta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.acct__chevron { flex: none; transition: transform var(--dur-fast) var(--ease-out); }
+.acct__trigger[aria-expanded="true"] .acct__chevron { transform: rotate(180deg); }
+
+/* ================================ Menu =================================== */
+
+.acct__menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 200px;
+  padding: 8px;
+  background: var(--surface-card);
+  border: var(--bw) solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-lg);
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 60;   /* sobre el header (50), bajo el modal (85) y el carrito (90) */
+}
+
+.acct__menu--open { display: flex; }
+
+.acct__menu a {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: var(--fw-semibold);
+  color: var(--lp-coffee-700);
+  text-decoration: none;
+}
+
+.acct__menu a:hover { background: var(--surface-sand); color: var(--lp-espresso); }
+.acct__menu a:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
+
+/* Salir se separa: no es una seccion mas, es irse. */
+.acct__salir {
+  margin-top: 4px;
+  border-top: var(--bw) solid var(--divider);
+  padding-top: 12px !important;
+  color: var(--text-muted) !important;
+}
+
+.acct__salir:hover { color: var(--lp-danger) !important; }
+
+/* ===================== Dentro del nav en pantalla chica ================== */
+/* Ahi el nav es una columna a pantalla completa: el menu deja de flotar y se
+   despliega en el flujo, o quedaria fuera de la vista. */
+@media (max-width: 1200px) {
+  .nav__cta { width: 100%; justify-content: center; text-align: center; }
+  .acct { display: block; width: 100%; }
+  .acct__trigger { width: 100%; max-width: none; justify-content: center; }
+  .acct__menu {
+    position: static;
+    min-width: 0;
+    margin-top: 8px;
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+    padding: 0;
+  }
+  .acct__menu a { text-align: center; }
+}

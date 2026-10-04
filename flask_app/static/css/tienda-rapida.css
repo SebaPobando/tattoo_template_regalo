@@ -1,0 +1,337 @@
+/* ===========================================================================
+   Plantilla Cafetería — Modal de eleccion rapida (.quickpick)
+   ---------------------------------------------------------------------------
+   Solo lo carga landing.html: la ficha de producto no lo necesita.
+   Centrado en desktop, hoja inferior (bottom sheet) en movil.
+   =========================================================================== */
+
+.quickpick {
+  position: fixed;
+  inset: 0;
+  z-index: 85;              /* sobre el header (50) y BAJO el drawer (90):
+                               al agregar, el modal se cierra con transicion
+                               mientras el drawer ya se esta abriendo encima */
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.quickpick[hidden] { display: none; }
+
+.quickpick__overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(22, 22, 22, 0.42);
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease-out);
+}
+
+.quickpick--open .quickpick__overlay { opacity: 1; }
+
+.quickpick__panel {
+  position: relative;
+  width: 100%;
+  max-height: 92vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: var(--sp-6) var(--sp-5) var(--sp-5);
+  background: var(--surface-page);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  box-shadow: var(--shadow-lg);
+  transform: translateY(16px);
+  opacity: 0;
+  transition: transform var(--dur) var(--ease-out), opacity var(--dur) var(--ease-out);
+}
+
+.quickpick--open .quickpick__panel { transform: none; opacity: 1; }
+
+@media (min-width: 640px) {
+  .quickpick { align-items: center; padding: var(--sp-5); }
+  .quickpick__panel {
+    max-width: 440px;
+    border-radius: var(--r-lg);
+    padding: var(--sp-6);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quickpick__overlay, .quickpick__panel { transition: none; }
+}
+
+.quickpick__close {
+  position: absolute;
+  top: var(--sp-3);
+  right: var(--sp-3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--text-body);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.quickpick__close:hover { background: var(--surface-sand); }
+.quickpick__close:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
+
+.quickpick__vendor {
+  margin: 0;
+  padding-right: 44px;      /* deja aire para la X */
+  text-transform: uppercase;
+  letter-spacing: var(--ls-eyebrow);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-bold);
+  color: var(--points);
+}
+
+.quickpick__title {
+  margin: var(--sp-2) 0 var(--sp-3);
+  padding-right: 44px;
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  line-height: 1.1;
+  color: var(--text-strong);
+}
+
+.quickpick__price {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  margin: 0 0 var(--sp-5);
+}
+
+.quickpick__clp { font-size: 1.5rem; font-weight: var(--fw-bold); color: var(--text-strong); }
+.quickpick__pts { font-size: var(--fs-small); font-weight: var(--fw-semibold); color: var(--points); }
+
+/* ================================ Campos ================================= */
+
+.quickpick__field { margin-bottom: var(--sp-5); }
+.quickpick__field[hidden] { display: none; }
+
+.quickpick__label {
+  display: block;
+  margin-bottom: var(--sp-2);
+  font-size: var(--fs-small);
+  font-weight: var(--fw-semibold);
+  color: var(--text-strong);
+}
+
+.quickpick__hint {
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+}
+
+.quickpick__pills { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+
+/* El radio real queda invisible pero enfocable: el label es la pastilla. */
+.quickpick__radio {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.quickpick__pill {
+  padding: 8px 16px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--r-pill);
+  background: var(--surface-card);
+  font-size: 0.82rem;
+  font-weight: var(--fw-semibold);
+  color: var(--text-body);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.quickpick__pill:hover { border-color: var(--accent); }
+
+.quickpick__radio:checked + .quickpick__pill {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--text-on-dark);
+}
+
+/* El foco se pinta en la pastilla porque el input no se ve */
+.quickpick__radio:focus-visible + .quickpick__pill { outline: none; box-shadow: var(--shadow-focus); }
+
+/* =============================== Cantidad ================================ */
+
+.quickpick__qty {
+  display: inline-flex;
+  align-items: center;
+  border: var(--bw-strong) solid var(--border-strong);
+  border-radius: var(--r-pill);
+  overflow: hidden;
+}
+
+.quickpick__step {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  background: transparent;
+  color: var(--text-strong);
+  font-size: 1.1rem;
+  font-weight: var(--fw-bold);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.quickpick__step:hover { background: var(--surface-sand); }
+.quickpick__step:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
+
+.quickpick__qty-input {
+  width: 48px;
+  height: 40px;
+  border: 0;
+  background: transparent;
+  text-align: center;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: var(--fw-semibold);
+  color: var(--text-strong);
+  -moz-appearance: textfield;
+}
+
+.quickpick__qty-input::-webkit-outer-spin-button,
+.quickpick__qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.quickpick__qty-input:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
+
+/* ================================ Acciones =============================== */
+
+.quickpick__submit { margin-top: var(--sp-2); }
+
+.quickpick__more {
+  display: block;
+  margin-top: var(--sp-3);
+  text-align: center;
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+  text-decoration: underline;
+}
+
+.quickpick__more:hover { color: var(--accent); }
+
+/* ================== Tarjeta de la tienda con boton propio ================= */
+/* El boton no puede ir dentro del <a> (HTML invalido), asi que la tarjeta es
+   un div y el enlace del titulo se estira sobre toda la tarjeta con un
+   pseudo-elemento. El boton se levanta por encima con position/z-index. */
+
+.product__link { text-decoration: none; color: inherit; }
+
+.product__link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.product--interactive { position: relative; }
+
+.product--interactive .product__foot { position: relative; z-index: 2; }
+
+.product__add { width: 100%; cursor: pointer; }
+
+
+/* ===========================================================================
+   Agotado
+   ---------------------------------------------------------------------------
+   Decision de Seba: lo agotado se MUESTRA marcado, no se esconde. Si
+   desapareciera, quien venia por ese cafe creeria que se dejo de vender.
+
+   El stock lo dice Shopify. Con el respaldo escrito a mano todo figura
+   disponible, porque el respaldo no sabe de stock y es preferible eso a
+   inventar un agotado que no existe.
+   =========================================================================== */
+
+.product--agotado { opacity: .62; }
+
+/* El enlace estirado de la tarjeta sigue funcionando: aunque este agotado, la
+   ficha del producto se puede abrir igual para leerlo. */
+.product__agotado {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: var(--sp-3) var(--sp-4);
+  border: var(--bw) dashed var(--border-strong);
+  border-radius: var(--r-pill);
+  background: var(--surface-sand);
+  color: var(--text-muted);
+  font-size: .82rem;
+  font-weight: var(--fw-bold);
+  letter-spacing: .02em;
+  position: relative;
+  z-index: 2;          /* igual que .product__foot, sobre el enlace estirado */
+}
+
+/* La pill del modal de eleccion rapida. */
+.quickpick__pill--agotada {
+  opacity: .42;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+.quickpick__radio:disabled + .quickpick__pill { pointer-events: none; }
+
+/* ======================= Pastillas de categoria ===========================
+   La tira que filtra la tienda por categoria, bajo el titulo de la seccion.
+   Se ve igual que las pestanas de la carta (.carta__tab) pero es otro bloque
+   y vive aca: las de la carta estan en el <style> de landing.html, que va
+   DESPUES de este archivo, asi que compartir selector seria pedir que una le
+   pise los estilos a la otra el dia que alguien toque cualquiera de las dos.
+   Las dos salen de los mismos tokens, que es lo que de verdad las mantiene
+   iguales. */
+
+.shop__tabs {
+  display: flex;
+  gap: var(--sp-2);
+  overflow-x: auto;         /* en el telefono la tira se arrastra con el dedo */
+  padding-block: var(--sp-2);
+  margin-bottom: var(--sp-5);
+  scrollbar-width: none;
+}
+
+.shop__tabs::-webkit-scrollbar { display: none; }
+
+/* Con espacio de sobra envuelven en vez de desplazarse: una categoria que
+   queda fuera de la vista, sin flecha ni corte visible, es una categoria que
+   nadie encuentra. */
+@media (min-width: 721px) {
+  .shop__tabs { flex-wrap: wrap; overflow-x: visible; }
+}
+
+.shop__tab {
+  flex-shrink: 0;
+  font-family: var(--font-body);
+  font-weight: var(--fw-semibold);
+  font-size: 0.875rem;
+  padding: 9px 18px;
+  border-radius: var(--r-pill);
+  border: var(--bw-strong) solid var(--border-strong);
+  background: transparent;
+  color: var(--lp-coffee-600);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease),
+              border-color var(--dur) var(--ease);
+}
+
+.shop__tab:hover { background: var(--surface-sand); }
+.shop__tab:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
+
+.shop__tab--active {
+  background: var(--lp-forest);
+  color: var(--lp-cream-50);
+  border-color: var(--lp-forest);
+}
+
+/* `hidden` solo no basta: .product declara `display: flex` y gana por
+   especificidad al display:none que el navegador le da a [hidden]. */
+.shop__grid .product[hidden] { display: none; }

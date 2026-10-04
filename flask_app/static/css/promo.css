@@ -1,0 +1,240 @@
+/* ===========================================================================
+   Plantilla Cafetería — Banner de promoción de la portada
+   ---------------------------------------------------------------------------
+   El banner va EN FLUJO, antes del header. En la landing el header es sticky,
+   así que el banner lo empuja hacia abajo y al hacer scroll se va solo; no
+   hace falta z-index ni calcular su altura. La burbuja sí es fija, y su
+   z-index (80) queda SOBRE el header (50) y BAJO el modal de la tienda (85)
+   y el drawer del carrito (90): con el carrito abierto, la promo no puede
+   quedar encima del botón de pagar.
+   =========================================================================== */
+
+.promo {
+  background: linear-gradient(118deg, var(--lp-forest) 0%, var(--lp-forest-900) 100%);
+  color: var(--lp-cream-50);
+  position: relative;
+}
+.promo[hidden] { display: none !important; }
+
+.promo__interior {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  max-width: 1180px;
+  margin-inline: auto;
+  padding: 14px 52px 14px var(--sp-4);
+}
+
+.promo__mascota {
+  width: 62px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, .3));
+}
+
+.promo__texto { flex: 1 1 200px; min-width: 0; }
+
+.promo__etiqueta {
+  display: inline-block;
+  font-size: .58rem;
+  font-weight: var(--fw-bold);
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--lp-gold-soft);
+}
+
+.promo__titulo {
+  margin: 1px 0 2px;
+  font-family: var(--font-display);
+  font-size: clamp(1.2rem, 3.4vw, 1.7rem);
+  line-height: 1.1;
+  /* Un nombre de una sola palabra más ancho que la columna no tiene dónde
+     partirse, y acá el contenido lo escribe el admin: no hay forma de saber
+     de antemano qué va a caber. Misma regla que .product__name. */
+  overflow-wrap: anywhere;
+}
+
+.promo__bajada {
+  margin: 0;
+  font-size: .8rem;
+  line-height: 1.45;
+  color: rgba(252, 248, 241, .76);
+  overflow-wrap: anywhere;
+}
+
+/* --- el contador --------------------------------------------------------- */
+
+.promo__reloj { display: flex; align-items: flex-end; gap: 5px; flex-shrink: 0; }
+.promo__caja { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.promo__caja[hidden] { display: none !important; }
+
+.promo__num {
+  font-size: clamp(1.05rem, 2.6vw, 1.35rem);
+  font-weight: var(--fw-bold);
+  line-height: 1;
+  /* Sin esto el contador "baila": en la mayoría de las tipografías el 1 es
+     más angosto que el 8, así que el ancho cambia cada segundo. */
+  font-variant-numeric: tabular-nums;
+  background: rgba(252, 248, 241, .1);
+  border: var(--bw) solid rgba(233, 199, 126, .34);
+  border-radius: 7px;
+  padding: 7px 9px;
+  min-width: 40px;
+  text-align: center;
+}
+
+.promo__rot {
+  font-style: normal;
+  font-size: .52rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: rgba(252, 248, 241, .6);
+}
+
+/* Última hora: el contador cambia de tono. No es decoración — es la
+   diferencia entre "hay tiempo" y "es ahora", y se ve sin leer el número. */
+.promo--urgente .promo__num {
+  border-color: var(--lp-gold);
+  background: rgba(198, 138, 46, .24);
+  color: #FFF0D4;
+}
+
+/* --- botón y cierre ------------------------------------------------------ */
+
+.promo__cta {
+  flex-shrink: 0;
+  font-family: var(--font-body);
+  font-size: .79rem;
+  font-weight: var(--fw-bold);
+  text-decoration: none;
+  padding: 11px 20px;
+  border-radius: var(--r-pill);
+  background: var(--lp-gold);
+  color: var(--lp-espresso);
+  white-space: nowrap;
+}
+.promo__cta:hover { filter: brightness(1.06); }
+.promo__cta:focus-visible { outline: 2px solid var(--lp-cream-50); outline-offset: 2px; }
+
+.promo__cerrar {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(252, 248, 241, .12);
+  color: var(--lp-cream-50);
+  border: 0;
+  cursor: pointer;
+  transition: background var(--dur) var(--ease);
+}
+.promo__cerrar:hover { background: rgba(252, 248, 241, .24); }
+.promo__cerrar:focus-visible { outline: 2px solid var(--lp-gold-soft); outline-offset: 2px; }
+
+@media (max-width: 760px) {
+  .promo__mascota { display: none; }
+  .promo__interior { flex-wrap: wrap; gap: var(--sp-3); padding-right: 48px; }
+  .promo__texto { flex-basis: 100%; }
+}
+
+/* =========================================================================
+   La burbuja — la promo en reposo
+   ========================================================================= */
+
+.promo-burbuja {
+  position: fixed;
+  left: var(--sp-4);
+  bottom: var(--sp-4);
+  z-index: 80;
+  max-width: min(310px, calc(100vw - 2 * var(--sp-4)));
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  transition: transform .3s var(--ease-out), opacity .22s var(--ease);
+}
+.promo-burbuja[hidden] { display: none !important; }
+.promo-burbuja--entrando { transform: translateY(14px) scale(.94); opacity: 0; }
+
+.promo-burbuja__mascota {
+  width: 78px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 6px 12px rgba(22, 22, 22, .3));
+}
+
+/* La caja existe solo para que el aspa se posicione contra el globo. Sin
+   ella el ancestro posicionado era .promo-burbuja, que es `fixed` y mas ancha
+   que su contenido: el aspa terminaba flotando sobre el fondo claro de la
+   pagina, fuera del globo y practicamente invisible. */
+.promo-burbuja__caja { position: relative; min-width: 0; }
+
+.promo-burbuja__globo {
+  font-family: var(--font-body);
+  text-align: left;
+  background: var(--lp-espresso);
+  color: var(--lp-cream-50);
+  border: var(--bw) solid var(--lp-gold-soft);
+  border-radius: 14px;
+  padding: 11px 34px 11px 14px;
+  box-shadow: var(--shadow-lg);
+  min-width: 0;
+  cursor: pointer;
+}
+.promo-burbuja__globo:focus-visible { outline: 2px solid var(--lp-gold); outline-offset: 2px; }
+
+.promo-burbuja__etiqueta {
+  display: block;
+  font-size: .54rem;
+  font-weight: var(--fw-bold);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--lp-gold-soft);
+}
+
+.promo-burbuja__titulo {
+  display: block;
+  margin-top: 1px;
+  font-size: .92rem;
+  font-weight: var(--fw-bold);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.promo-burbuja__reloj {
+  display: block;
+  margin-top: 4px;
+  font-size: .78rem;
+  font-weight: var(--fw-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--lp-gold-soft);
+}
+
+.promo-burbuja__descartar {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  /* Opaco y con borde: va montado sobre el canto del globo, donde detras
+     puede haber tanto el marron del globo como el fondo de la pagina. */
+  background: var(--lp-espresso);
+  color: var(--lp-cream-50);
+  border: var(--bw) solid var(--lp-gold-soft);
+  cursor: pointer;
+  line-height: 0;
+}
+.promo-burbuja__descartar:focus-visible { outline: 2px solid var(--lp-gold); outline-offset: 2px; }
+
+/* Con el drawer del carrito abierto el body lleva .has-cart-open. La burbuja
+   se va: el drawer entra por la derecha pero en móvil ocupa todo el ancho, y
+   la mascota quedaría encima de los botones del carrito. */
+body.has-cart-open .promo-burbuja { opacity: 0; pointer-events: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .promo-burbuja { transition: none; }
+}

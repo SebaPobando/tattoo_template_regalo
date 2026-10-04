@@ -1,0 +1,312 @@
+{% extends "base.html" %}
+{% block title %}Inscritos en {{ a.nombre }} · Administración{% endblock %}
+{% block descripcion %}Lista de inscritos.{% endblock %}
+
+{% block head_extra %}
+<style>
+  .vuelta { display:inline-block; color:var(--text-muted); text-decoration:none;
+    font-size:.85rem; margin-bottom:var(--sp-4) }
+  .vuelta:hover { color:var(--lp-espresso) }
+  .lista { width:100%; border-collapse:collapse; font-size:.88rem }
+  .lista th { text-align:left; font-size:.7rem; text-transform:uppercase;
+    letter-spacing:.08em; color:var(--text-muted); padding:0 var(--sp-3) var(--sp-2);
+    border-bottom:var(--bw) solid var(--border) }
+  .lista td { padding:var(--sp-3); border-bottom:var(--bw) solid var(--border);
+    vertical-align:middle }
+  .lista tr:last-child td { border-bottom:0 }
+  .persona__nombre { font-weight:var(--fw-semibold); color:var(--lp-espresso) }
+  .persona__dato { color:var(--text-muted); font-size:.8rem }
+  .sin-cuenta { display:inline-block; font-size:.62rem; letter-spacing:.1em;
+    text-transform:uppercase; font-weight:var(--fw-bold); color:#9B0D23;
+    background:var(--lp-gold-bg); padding:2px 7px; border-radius:3px; margin-left:6px }
+  .estado-form { display:flex; gap:6px; align-items:center; margin-top:6px }
+  .estado-form select { font:inherit; font-size:.82rem; padding:6px 10px;
+    border-radius:var(--r-sm); border:var(--bw) solid var(--border-strong);
+    background:var(--surface-page); color:var(--text-body) }
+  .resumen { display:flex; flex-wrap:wrap; gap:var(--sp-4);
+    padding:var(--sp-4) var(--sp-5); background:var(--surface-sand);
+    border-radius:var(--r-md); margin-bottom:var(--sp-5) }
+  .resumen__dato b { display:block; font-size:1.5rem; color:var(--lp-espresso);
+    font-family:var(--font-display); line-height:1.1 }
+  .resumen__dato span { font-size:.75rem; color:var(--text-muted);
+    text-transform:uppercase; letter-spacing:.08em }
+  .resumen__dato--cola b { color:#9B0D23 }
+  .vacio { text-align:center; padding:var(--sp-7) var(--sp-4);
+    border:var(--bw) dashed var(--border-strong); border-radius:var(--r-md);
+    color:var(--text-muted) }
+
+  /* --- La barra del formulario de comprobantes -------------------------
+     Es el primer clic del flujo: el admin abre el Google Form, mira los
+     comprobantes que llegaron y vuelve acá a confirmar. Por eso va arriba
+     de todo y no escondido en la edición de la actividad. */
+  .comprobantes { display:flex; flex-wrap:wrap; gap:var(--sp-3); align-items:center;
+    padding:var(--sp-4) var(--sp-5); border:var(--bw) solid var(--border);
+    border-radius:var(--r-md); margin-bottom:var(--sp-5) }
+  .comprobantes p { margin:0; font-size:.86rem; color:var(--text-body) }
+  .comprobantes .btn { margin-left:auto }
+
+  /* --- Etiquetas de estado --------------------------------------------- */
+  .et { display:inline-block; font-size:.66rem; letter-spacing:.09em;
+    text-transform:uppercase; font-weight:var(--fw-bold); padding:3px 9px;
+    border-radius:var(--r-pill); white-space:nowrap }
+  .et--pendiente { background:var(--lp-gold-bg); color:#9B0D23 }
+  .et--revisar { background:#E8EEF5; color:#1F4A7A }
+  .et--pagada { background:#E7F0E9; color:#1D4A31 }
+  .et--asistio { background:#E7F0E9; color:#1D4A31 }
+  .et--fria { background:var(--surface-sand); color:var(--text-muted) }
+
+  .acciones { display:flex; flex-wrap:wrap; gap:6px; align-items:center }
+  .rechazo-form { display:flex; gap:6px; align-items:center }
+  .rechazo-form input { font:inherit; font-size:.8rem; padding:6px 10px; width:150px;
+    border-radius:var(--r-sm); border:var(--bw) solid var(--border-strong);
+    background:var(--surface-page); color:var(--text-body) }
+  .codigo-mini { font-family:var(--font-display); font-size:.9rem;
+    color:var(--lp-forest); text-decoration:none }
+  .codigo-mini:hover { text-decoration:underline }
+
+  /* --- El enlace de la persona, para mandárselo a mano ------------------
+     Media cafetería se inscribe sin cuenta, y a esa gente hay que escribirle
+     igual. Acá está su enlace listo para copiar, el botón que abre WhatsApp
+     con el mensaje escrito, y el reenvío del correo. */
+  .compartir { display:flex; flex-wrap:wrap; gap:6px; align-items:center;
+    margin-top:8px; padding-top:8px; border-top:var(--bw) dashed var(--border) }
+  .compartir__url { font:inherit; font-size:.72rem; padding:5px 8px; width:196px;
+    border-radius:var(--r-sm); border:var(--bw) solid var(--border);
+    background:var(--surface-sand); color:var(--text-muted) }
+  .mini { font:inherit; font-size:.72rem; font-weight:var(--fw-semibold);
+    padding:5px 10px; border-radius:var(--r-pill); cursor:pointer;
+    border:var(--bw) solid var(--border-strong); background:transparent;
+    color:var(--lp-coffee-600); text-decoration:none; white-space:nowrap }
+  .mini:hover { background:var(--surface-sand) }
+  .mini--wa { border-color:#25D366; color:#0F7B3D }
+  .mini--ok { border-color:var(--lp-forest); color:var(--lp-forest) }
+
+  @media (max-width:820px) {
+    .lista, .lista tbody, .lista tr, .lista td { display:block; width:100% }
+    .lista thead { display:none }
+    .lista tr { border:var(--bw) solid var(--border); border-radius:var(--r-md);
+      margin-bottom:var(--sp-3); padding:var(--sp-2) }
+    .lista td { border-bottom:0; padding:var(--sp-2) var(--sp-3) }
+    .comprobantes .btn { margin-left:0 }
+  }
+</style>
+{% endblock %}
+
+{% block contenido %}
+<main class="section"><div class="container" style="max-width:980px">
+
+  <a class="vuelta" href="{{ url_for('admin_actividades') }}">← Todas las actividades</a>
+
+  <div class="auth__eyebrow">Inscritos</div>
+  <h1 style="margin:6px 0 var(--sp-4)">{{ a.nombre }}</h1>
+
+  <div class="resumen">
+    <div class="resumen__dato"><b>{{ a.inscritos }}</b><span>de {{ a.cupos }} cupos</span></div>
+    <div class="resumen__dato resumen__dato--cola">
+      <b>{{ inscritos|selectattr('estado','equalto','por_revisar')|list|length }}</b>
+      <span>por revisar</span></div>
+    <div class="resumen__dato">
+      <b>{{ inscritos|selectattr('estado','equalto','pagada')|list|length }}</b><span>pagadas</span></div>
+    <div class="resumen__dato">
+      <b>{{ inscritos|selectattr('estado','equalto','pendiente')|list|length }}</b><span>esperando pago</span></div>
+    <div class="resumen__dato" style="margin-left:auto;text-align:right">
+      <b style="font-size:1rem">{{ a.cuando }}</b><span>{{ a.precio_fmt }}</span></div>
+  </div>
+
+  {% if a.precio_clp %}
+  <div class="comprobantes">
+    {% if a.formulario_url %}
+    <p><b>Los comprobantes llegan al formulario.</b><br />
+      Ábrelo, mira quién pagó y vuelve acá a activar los vouchers.</p>
+    <a class="btn btn--outline btn--sm" href="{{ a.formulario_url }}"
+       target="_blank" rel="noopener noreferrer">Ver las respuestas →</a>
+    {% else %}
+    <p><b>Esta actividad no tiene formulario.</b><br />
+      Sin él, quien tome un cupo no tiene dónde subir su comprobante.
+      Se agrega en <a href="{{ url_for('admin_actividades') }}">la edición de la actividad</a>.</p>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if inscritos %}
+  <table class="lista">
+    <thead>
+      <tr><th>Persona</th><th>Contacto</th><th>Estado</th><th>Pago</th></tr>
+    </thead>
+    <tbody>
+      {% for i in inscritos %}
+      <tr>
+        <td>
+          <span class="persona__nombre">{{ i.nombre or '(sin nombre)' }} {{ i.apellido or '' }}</span>
+          {# Marcar a los invitados importa: son quienes no han creado cuenta,
+             y a quienes hay que escribirles a mano. #}
+          {% if i.estado_usuario == 'invitado' %}<span class="sin-cuenta">Sin cuenta</span>{% endif %}
+          <div class="persona__dato">Se inscribió el {{ i.created_at.strftime('%d/%m/%Y %H:%M') }}</div>
+          {% if i.voucher_codigo %}
+          <a class="codigo-mini" href="{{ url_for('inscripcion', codigo=i.voucher_codigo) }}"
+             target="_blank" rel="noopener">{{ i.voucher_codigo }}</a>
+
+          <div class="compartir">
+            {# readonly y no disabled: un campo deshabilitado no se puede
+               seleccionar ni copiar a mano, que es justo lo que se quiere. #}
+            <input class="compartir__url" type="text" readonly value="{{ i.url }}"
+                   aria-label="Enlace de la inscripción de {{ i.nombre or i.email }}"
+                   onclick="this.select()" />
+            <button class="mini" type="button" data-copiar="{{ i.url }}">Copiar</button>
+            {% if i.whatsapp %}
+            <a class="mini mini--wa" href="{{ i.whatsapp }}"
+               target="_blank" rel="noopener noreferrer">WhatsApp</a>
+            {% endif %}
+            <form method="POST" style="display:inline"
+                  action="{{ url_for('admin_inscripcion_reenviar', inscripcion_id=i.id) }}">
+              <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+              <input type="hidden" name="volver"
+                     value="{{ url_for('admin_inscritos', actividad_id=a.id) }}" />
+              <button class="mini" type="submit">Reenviar correo</button>
+            </form>
+          </div>
+          {% endif %}
+        </td>
+        <td>
+          <div class="persona__dato">{{ i.email }}</div>
+          {% if i.telefono %}<div class="persona__dato">{{ i.telefono }}</div>{% endif %}
+        </td>
+        <td>
+          {% if i.estado == 'por_revisar' %}
+            <span class="et et--revisar">Por revisar</span>
+            <div class="persona__dato" style="margin-top:4px">
+              Avisó el {{ i.aviso_formulario_at.strftime('%d/%m %H:%M') if i.aviso_formulario_at }}</div>
+          {% elif i.estado == 'pendiente' %}
+            <span class="et et--pendiente">Esperando pago</span>
+            <div class="persona__dato" style="margin-top:4px">
+              {% if i.reserva_vence_at %}Vence el {{ i.reserva_vence_at.strftime('%d/%m %H:%M') }} UTC
+              {% else %}Sin vencimiento{% endif %}</div>
+            {% if i.nota_admin %}
+            <div class="persona__dato">Rechazado: {{ i.nota_admin }}</div>
+            {% endif %}
+          {% elif i.estado == 'pagada' %}
+            <span class="et et--pagada">Voucher activo</span>
+          {% elif i.estado == 'asistio' %}
+            <span class="et et--asistio">Asistió</span>
+          {% else %}
+            <span class="et et--fria">{{ i.estado|replace('_',' ')|capitalize }}</span>
+          {% endif %}
+        </td>
+        <td>
+          <div class="acciones">
+            {% if i.estado in ('pendiente', 'por_revisar') %}
+            {# Confirmar es el botón del flujo: activa el voucher y le manda
+               el correo. El selector de abajo queda para los casos raros. #}
+            <form method="POST"
+                  action="{{ url_for('admin_inscripcion_confirmar', inscripcion_id=i.id) }}">
+              <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+              <input type="hidden" name="volver"
+                     value="{{ url_for('admin_inscritos', actividad_id=a.id) }}" />
+              <button class="btn btn--primary btn--sm" type="submit">Confirmar pago</button>
+            </form>
+            <form class="rechazo-form" method="POST"
+                  action="{{ url_for('admin_inscripcion_rechazar', inscripcion_id=i.id) }}">
+              <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+              <input type="hidden" name="volver"
+                     value="{{ url_for('admin_inscritos', actividad_id=a.id) }}" />
+              <input name="motivo" maxlength="255" placeholder="motivo (opcional)" />
+              <button class="btn btn--outline btn--sm" type="submit">Rechazar</button>
+            </form>
+            {% elif i.estado == 'pagada' %}
+            <form method="POST"
+                  action="{{ url_for('admin_inscripcion_estado', inscripcion_id=i.id) }}">
+              <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+              <input type="hidden" name="volver"
+                     value="{{ url_for('admin_inscritos', actividad_id=a.id) }}" />
+              <input type="hidden" name="estado" value="asistio" />
+              <button class="btn btn--outline btn--sm" type="submit">Marcar que asistió</button>
+            </form>
+            {% endif %}
+          </div>
+
+          <form class="estado-form" method="POST"
+                action="{{ url_for('admin_inscripcion_estado', inscripcion_id=i.id) }}">
+            <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+            <input type="hidden" name="volver"
+                   value="{{ url_for('admin_inscritos', actividad_id=a.id) }}" />
+            <select name="estado">
+              {% for e in estados %}
+              <option value="{{ e }}" {{ 'selected' if e == i.estado }}>
+                {{ e|replace('_',' ')|capitalize }}
+              </option>
+              {% endfor %}
+            </select>
+            <button class="btn btn--outline btn--sm" type="submit">OK</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <p style="color:var(--text-muted);font-size:.82rem;margin-top:var(--sp-5)">
+    <b>Confirmar pago</b> activa el voucher y le manda el correo con su entrada.
+    <b>Rechazar</b> no la echa del evento: le devuelve el plazo con el motivo a
+    la vista para que lo arregle. <b>Cancelada</b> y <b>vencida</b> liberan el
+    cupo; los demás estados lo mantienen ocupado.
+  </p>
+  {% else %}
+  <div class="vacio">
+    <p style="margin:0"><b>Todavía no se inscribe nadie.</b></p>
+    {% if a.estado == 'borrador' %}
+    <p style="margin:var(--sp-2) 0 0;font-size:.85rem">
+      Normal: esta actividad está en <b>borrador</b> y no la ve nadie.
+    </p>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div></main>
+{% endblock %}
+
+{% block page_js %}
+<script>
+  /* Copiar al portapapeles. navigator.clipboard NO existe fuera de https (ni
+     en localhost con IP), así que hay un plan B con un <textarea> temporal y
+     execCommand: viejo, pero es lo que funciona en un servidor local por
+     http, que es justo donde corre esto hoy. */
+  document.addEventListener('click', function (e) {
+    var boton = e.target.closest('[data-copiar]');
+    if (!boton) return;
+    var texto = boton.dataset.copiar;
+
+    function avisar() {
+      var antes = boton.textContent;
+      boton.textContent = '¡Copiado!';
+      boton.classList.add('mini--ok');
+      setTimeout(function () {
+        boton.textContent = antes;
+        boton.classList.remove('mini--ok');
+      }, 1600);
+    }
+
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(texto).then(avisar, respaldo);
+    } else {
+      respaldo();
+    }
+
+    function respaldo() {
+      var caja = document.createElement('textarea');
+      caja.value = texto;
+      caja.setAttribute('readonly', '');
+      caja.style.position = 'fixed';
+      caja.style.opacity = '0';
+      document.body.appendChild(caja);
+      caja.select();
+      try { document.execCommand('copy'); avisar(); } catch (err) {
+        /* Ni así: al menos le dejamos el texto seleccionado en el campo de
+           al lado para que copie con Ctrl+C. */
+        var campo = boton.parentElement.querySelector('.compartir__url');
+        if (campo) { campo.focus(); campo.select(); }
+      }
+      document.body.removeChild(caja);
+    }
+  });
+</script>
+{% endblock %}

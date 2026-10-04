@@ -1,0 +1,49 @@
+/* ===========================================================================
+   Plantilla Cafetería — Spacing, radius, shadow, layout tokens
+   8px base rhythm. Soft, warm shadows (brown-tinted, never pure black).
+   Corner radii for a clean, friendly feel.
+   =========================================================================== */
+:root {
+  /* Spacing scale (8px base) */
+  --sp-0: 0; /* @kind spacing */
+  --sp-1: 0.25rem;   /* 4 */
+  --sp-2: 0.5rem;    /* 8 */
+  --sp-3: 0.75rem;   /* 12 */
+  --sp-4: 1rem;      /* 16 */
+  --sp-5: 1.5rem;    /* 24 */
+  --sp-6: 2rem;      /* 32 */
+  --sp-7: 3rem;      /* 48 */
+  --sp-8: 4rem;      /* 64 */
+  --sp-9: 6rem;      /* 96 */
+
+  /* Border radius — rounded & friendly */
+  --r-xs: 6px;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+  --r-pill: 999px;
+
+  /* Borders */
+  --bw: 1px; /* @kind spacing */
+  --bw-strong: 2px; /* @kind spacing */
+
+  /* Shadows — warm brown-tinted, soft */
+  --shadow-xs: 0 1px 2px rgba(22, 22, 22, 0.06);
+  --shadow-sm: 0 2px 8px rgba(22, 22, 22, 0.08);
+  --shadow-md: 0 6px 20px rgba(22, 22, 22, 0.10);
+  --shadow-lg: 0 16px 40px rgba(22, 22, 22, 0.14);
+  --shadow-focus: 0 0 0 3px rgba(32, 57, 43, 0.25);   /* forest focus ring */
+
+  /* Layout */
+  --container: 1180px; /* @kind spacing */
+  --container-narrow: 720px; /* @kind spacing */
+  --gutter: clamp(1rem, 4vw, 2.5rem); /* @kind spacing */
+
+  /* Motion */
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1); /* @kind other */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1); /* @kind other */
+  --dur-fast: 140ms; /* @kind other */
+  --dur: 240ms; /* @kind other */
+  --dur-slow: 420ms; /* @kind other */
+}

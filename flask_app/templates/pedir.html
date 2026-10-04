@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+{% block title %}Pedir para retirar · {{ negocio.nombre }}{% endblock %}
+{% block descripcion %}Pide desde acá, elige a qué hora pasas y retíralo listo.{% endblock %}
+
+{% block head_extra %}
+<style>
+  /* =====================================================================
+     Pedir para retirar. Mobile first: se pide desde el celular, casi
+     siempre con una mano. Por eso los controles son grandes, la franja se
+     elige con botones y no con un <select>, y el total con el botón de
+     enviar quedan pegados abajo de la pantalla.
+
+     El precio va solo en CLP, igual que en la carta de la portada: los
+     puntos todavía no se pueden usar para pagar, y mostrar un precio en
+     puntos que nadie puede pagar es prometer algo que no existe.
+     ===================================================================== */
+  .pedir { max-width: 640px; padding-bottom: 120px; }
+  .pedir__eyebrow { font-size: .72rem; letter-spacing: .14em; text-transform: uppercase;
+    font-weight: var(--fw-bold); color: var(--text-muted); }
+  .pedir__titulo { margin: 6px 0 var(--sp-2); }
+  .pedir__lugar { color: var(--text-muted); margin: 0; font-size: .92rem; }
+  .pedir__aviso { margin: var(--sp-4) 0 0; padding: var(--sp-3) var(--sp-4);
+    background: var(--lp-gold-bg); color: #9B0D23; border-radius: var(--r-md);
+    font-size: .9rem; line-height: 1.5; }
+
+  .encurso { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4);
+    align-items: center; justify-content: space-between;
+    margin-top: var(--sp-5); padding: var(--sp-4) var(--sp-5);
+    border: var(--bw-strong) solid var(--lp-forest); border-radius: var(--r-md);
+    background: var(--surface-card); }
+  .encurso__txt { margin: 0; font-size: .92rem; color: var(--lp-espresso); }
+
+  .paso { margin-top: var(--sp-7); }
+  .paso__tit { font-family: var(--font-display); font-size: 1.25rem;
+    color: var(--lp-espresso); margin: 0 0 var(--sp-3); }
+  .paso__num { display: inline-grid; place-items: center; width: 26px; height: 26px;
+    border-radius: 50%; background: var(--lp-forest); color: var(--lp-cream-50);
+    font-family: var(--font-body); font-size: .8rem; font-weight: var(--fw-bold);
+    margin-right: 8px; vertical-align: 2px; }
+
+  /* --- La carta pedible --------------------------------------------- */
+  .grupo__tit { font-size: .72rem; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--text-muted); font-weight: var(--fw-bold);
+    margin: var(--sp-5) 0 var(--sp-2); }
+  .prod { display: flex; gap: var(--sp-3); align-items: center;
+    padding: var(--sp-3) 0; border-bottom: var(--bw) solid var(--divider); }
+  .prod__info { flex: 1 1 auto; min-width: 0; }
+  .prod__nombre { font-weight: var(--fw-semibold); color: var(--lp-espresso); margin: 0; }
+  .prod__desc { font-size: .8rem; color: var(--text-muted); margin: 2px 0 0; line-height: 1.45; }
+  .prod__precio { font-size: .85rem; color: var(--lp-espresso); margin: 4px 0 0;
+    font-variant-numeric: tabular-nums; }
+  .prod--elegido .prod__nombre { color: var(--lp-forest); }
+
+  /* El contador: − [n] +. Sin JavaScript queda el input numérico solo,
+     que también funciona. */
+  .cant { flex: none; display: flex; align-items: center; gap: 4px; }
+  .cant__btn { width: 40px; height: 40px; border-radius: 50%;
+    border: var(--bw-strong) solid var(--border-strong); background: var(--surface-page);
+    color: var(--lp-espresso); font-size: 1.2rem; line-height: 1; cursor: pointer;
+    display: none; }
+  .js .cant__btn { display: inline-grid; place-items: center; }
+  .cant__btn:disabled { opacity: .35; cursor: default; }
+  .cant__input { width: 52px; height: 40px; text-align: center; font-size: 1rem;
+    border: var(--bw-strong) solid var(--border-strong); border-radius: var(--r-sm);
+    background: var(--surface-page); color: var(--text-strong);
+    font-variant-numeric: tabular-nums; -moz-appearance: textfield; }
+  .js .cant__input { width: 34px; border-color: transparent; background: transparent;
+    font-weight: var(--fw-bold); }
+  .cant__input::-webkit-outer-spin-button,
+  .cant__input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+  /* --- Las franjas --------------------------------------------------- */
+  .dia__tit { font-weight: var(--fw-semibold); color: var(--lp-espresso);
+    margin: var(--sp-4) 0 var(--sp-2); font-size: .95rem; }
+  .franjas { display: grid; grid-template-columns: repeat(auto-fill, minmax(82px, 1fr));
+    gap: var(--sp-2); }
+  .franja { position: relative; }
+  .franja input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+  .franja__caja { display: flex; flex-direction: column; align-items: center;
+    padding: 10px 4px; border: var(--bw-strong) solid var(--border-strong);
+    border-radius: var(--r-md); background: var(--surface-page);
+    font-variant-numeric: tabular-nums; }
+  .franja__hora { font-weight: var(--fw-bold); color: var(--lp-espresso); }
+  .franja__libres { font-size: .68rem; color: var(--text-muted); margin-top: 2px; }
+  .franja input:checked + .franja__caja { border-color: var(--lp-forest);
+    background: var(--lp-forest); }
+  .franja input:checked + .franja__caja .franja__hora,
+  .franja input:checked + .franja__caja .franja__libres { color: var(--lp-cream-50); }
+  .franja input:focus-visible + .franja__caja { box-shadow: var(--shadow-focus); }
+  .franja input:disabled { cursor: not-allowed; }
+  .franja input:disabled + .franja__caja { opacity: .45; border-style: dashed; }
+  .franja input:disabled + .franja__caja .franja__hora { text-decoration: line-through; }
+
+  .vacio { padding: var(--sp-5); border: var(--bw) dashed var(--border-strong);
+    border-radius: var(--r-md); color: var(--text-muted); text-align: center; }
+
+  /* --- La barra de abajo --------------------------------------------- */
+  .total { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+    background: var(--surface-card); border-top: var(--bw) solid var(--border);
+    box-shadow: 0 -6px 20px rgba(0,0,0,.06);
+    padding: var(--sp-3) 16px calc(var(--sp-3) + env(safe-area-inset-bottom)); }
+  .total__in { max-width: 640px; margin: 0 auto; display: flex; gap: var(--sp-3);
+    align-items: center; justify-content: space-between; }
+  .total__monto { font-family: var(--font-display); font-size: 1.25rem;
+    color: var(--lp-espresso); line-height: 1.1; }
+  .total__detalle { font-size: .74rem; color: var(--text-muted); }
+  .total .btn { flex: none; }
+
+  @media (min-width: 760px) {
+    .pedir { padding-bottom: 140px; }
+  }
+</style>
+{% endblock %}
+
+{% block contenido %}
+<main class="section"><div class="container pedir">
+  <div class="pedir__eyebrow">Para retirar</div>
+  <h1 class="pedir__titulo">Pide y pasa a buscarlo</h1>
+  {% if cfg and cfg.lugar_publico %}
+  <p class="pedir__lugar">Se retira en {{ cfg.lugar_publico }}. La dirección exacta te aparece al confirmar.</p>
+  {% endif %}
+  {% if cfg and cfg.activo and cfg.aviso %}
+  <p class="pedir__aviso">{{ cfg.aviso }}</p>
+  {% endif %}
+
+  {% for e in en_curso %}
+  <div class="encurso">
+    <p class="encurso__txt"><b>Tienes un pedido en curso</b> · {{ e.franja_dia }} {{ e.franja_hora }} · {{ e.titulo }}</p>
+    <a class="btn btn--outline btn--sm" href="{{ url_for('pedido', codigo=e.codigo) }}">Ver mi pedido</a>
+  </div>
+  {% endfor %}
+
+  {% if not cfg or not cfg.activo %}
+  <div class="vacio" style="margin-top:var(--sp-6)">
+    <p style="margin:0 0 var(--sp-3)"><b>En este momento no estamos tomando pedidos.</b></p>
+    <a class="btn btn--outline btn--sm" href="{{ url_for('home') }}#carta">Ver el catálogo</a>
+  </div>
+
+  {% elif not carta %}
+  <div class="vacio" style="margin-top:var(--sp-6)">
+    <p style="margin:0">Hoy no hay nada disponible para pedir. Vuelve más tarde.</p>
+  </div>
+
+  {% else %}
+  {% if error %}
+  <div class="alert alert--error alert--visible" role="alert" style="margin-top:var(--sp-5)">{{ error }}</div>
+  {% endif %}
+
+  <form method="POST" action="{{ url_for('pedir_enviar') }}" id="formPedido" novalidate>
+    <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+
+    <section class="paso" aria-labelledby="paso1">
+      <h2 class="paso__tit" id="paso1"><span class="paso__num">1</span>¿Qué te dejamos listo?</h2>
+      {% for g in carta %}
+      <h3 class="grupo__tit">{{ g.label }}</h3>
+      {% for it in g['items'] %}
+      {% set n = previo.cant.get(it.clave, 0) %}
+      <div class="prod{{ ' prod--elegido' if n }}" data-precio="{{ it.clp }}">
+        <div class="prod__info">
+          <p class="prod__nombre" id="n-{{ it.clave }}">{{ it.nombre }}</p>
+          {% if it.desc %}<p class="prod__desc">{{ it.desc }}</p>{% endif %}
+          <p class="prod__precio">${{ it.clp | miles }} CLP</p>
+        </div>
+        <div class="cant">
+          <button class="cant__btn" type="button" data-paso="-1" aria-label="Uno menos de {{ it.nombre }}">−</button>
+          <input class="cant__input" type="number" inputmode="numeric" min="0"
+                 max="{{ cfg.max_items }}" name="cant_{{ it.clave }}" value="{{ n }}"
+                 aria-labelledby="n-{{ it.clave }}" />
+          <button class="cant__btn" type="button" data-paso="1" aria-label="Uno más de {{ it.nombre }}">+</button>
+        </div>
+      </div>
+      {% endfor %}
+      {% endfor %}
+      <p class="field__hint" style="margin-top:var(--sp-3)">Hasta {{ cfg.max_items }} unidades por pedido.</p>
+    </section>
+
+    <section class="paso" aria-labelledby="paso2">
+      <h2 class="paso__tit" id="paso2"><span class="paso__num">2</span>¿A qué hora pasas?</h2>
+      {% if not dias %}
+      <div class="vacio">Por hoy ya no quedan horas para pedir. Vuelve mañana.</div>
+      {% elif not hay_libres %}
+      <div class="vacio">Se llenaron todas las horas disponibles. Vuelve más tarde.</div>
+      {% endif %}
+      {% for d in dias %}
+      <p class="dia__tit">{{ d.dia }}</p>
+      <div class="franjas" role="radiogroup" aria-label="Horas de {{ d.dia }}">
+        {% for f in d.franjas %}
+        <label class="franja">
+          <input type="radio" name="franja" value="{{ f.clave }}"
+                 {{ 'checked' if f.clave == previo.franja }} {{ 'disabled' if not f.libres }}
+                 aria-label="{{ d.dia }} a las {{ f.hora }}{{ ', lleno' if not f.libres }}" />
+          <span class="franja__caja">
+            <span class="franja__hora">{{ f.hora }}</span>
+            <span class="franja__libres">{{ 'lleno' if not f.libres else (f.libres ~ ' cupo' ~ ('s' if f.libres != 1 else '')) }}</span>
+          </span>
+        </label>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </section>
+
+    <section class="paso" aria-labelledby="paso3">
+      <h2 class="paso__tit" id="paso3"><span class="paso__num">3</span>¿A nombre de quién?</h2>
+      <div class="field">
+        <label class="field__label" for="nombre">Nombre</label>
+        <input class="field__input" id="nombre" name="nombre" maxlength="60"
+               autocomplete="given-name" required value="{{ previo.nombre }}" />
+      </div>
+      <div class="field">
+        <label class="field__label" for="telefono">Celular</label>
+        <input class="field__input" id="telefono" name="telefono" type="tel"
+               autocomplete="tel" inputmode="tel" required placeholder="9 1234 5678"
+               value="{{ previo.telefono }}" />
+        <span class="field__hint">Solo para avisarte si pasa algo con tu pedido.</span>
+      </div>
+      <div class="field">
+        <label class="field__label" for="notas">Algo que debamos saber <span style="font-weight:var(--fw-regular);color:var(--text-muted)">(opcional)</span></label>
+        <input class="field__input" id="notas" name="notas" maxlength="200"
+               placeholder="Sin azúcar, leche aparte…" value="{{ previo.notas }}" />
+      </div>
+      <p class="field__hint" style="font-size:.85rem">
+        <b style="color:var(--lp-espresso)">Pagas al retirar.</b>
+        Si no puedes venir, cancélalo desde la página del pedido mientras no
+        lo empecemos a juntar.
+      </p>
+    </section>
+
+    <div class="total">
+      <div class="total__in">
+        <div>
+          <div class="total__monto" id="totalMonto">$0 CLP</div>
+          <div class="total__detalle" id="totalDetalle">Elige algo del catálogo</div>
+        </div>
+        <button class="btn btn--primary" type="submit" id="btnPedir" {{ 'disabled' if not hay_libres }}>Pedir</button>
+      </div>
+    </div>
+  </form>
+  {% endif %}
+</div></main>
+{% endblock %}
+
+{% block page_js %}
+<script>
+/* El total de abajo es solo para mostrar: el servidor vuelve a calcularlo con
+   los precios de la base y es ese el que vale. Sin JavaScript el formulario
+   funciona igual con los números a mano. */
+(function () {
+  var form = document.getElementById('formPedido');
+  if (!form) return;
+  document.documentElement.classList.add('js');
+
+  var max = {{ cfg.max_items if cfg else 0 }};
+  var montoEl = document.getElementById('totalMonto');
+  var detalleEl = document.getElementById('totalDetalle');
+  var filas = form.querySelectorAll('.prod');
+
+  function clp(n) { return '$' + n.toLocaleString('es-CL') + ' CLP'; }
+
+  function recalcular() {
+    var total = 0, unidades = 0;
+    filas.forEach(function (f) {
+      var n = parseInt(f.querySelector('.cant__input').value, 10) || 0;
+      unidades += n;
+      total += n * parseInt(f.dataset.precio, 10);
+      f.classList.toggle('prod--elegido', n > 0);
+    });
+    filas.forEach(function (f) {
+      var input = f.querySelector('.cant__input');
+      var n = parseInt(input.value, 10) || 0;
+      f.querySelector('[data-paso="-1"]').disabled = n <= 0;
+      f.querySelector('[data-paso="1"]').disabled = unidades >= max;
+    });
+    montoEl.textContent = clp(total);
+    detalleEl.textContent = unidades
+      ? unidades + (unidades === 1 ? ' unidad' : ' unidades') + ' · pagas al retirar'
+      : 'Elige algo del catálogo';
+  }
+
+  form.addEventListener('click', function (e) {
+    var b = e.target.closest('.cant__btn');
+    if (!b) return;
+    var input = b.parentNode.querySelector('.cant__input');
+    var n = (parseInt(input.value, 10) || 0) + parseInt(b.dataset.paso, 10);
+    input.value = Math.max(0, n);
+    recalcular();
+  });
+  form.addEventListener('input', recalcular);
+
+  /* Evita el doble envío con dos toques rápidos: el segundo pediría otra
+     franja con el mismo café. */
+  form.addEventListener('submit', function () {
+    var btn = document.getElementById('btnPedir');
+    setTimeout(function () { btn.disabled = true; btn.textContent = 'Enviando…'; }, 0);
+  });
+
+  recalcular();
+})();
+</script>
+{% endblock %}

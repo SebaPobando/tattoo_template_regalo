@@ -1,0 +1,441 @@
+{% extends "base.html" %}
+{% block title %}Packs del catálogo · {{ negocio.nombre }}{% endblock %}
+{% block descripcion %}Packs y kits: varios productos a un precio.{% endblock %}
+
+{% block head_extra %}
+<style>
+  .cb { display:grid; gap:var(--sp-5); margin-top:var(--sp-6) }
+  .cb__caja { background:var(--surface-card); border:var(--bw) solid var(--border);
+    border-radius:var(--r-md); padding:var(--sp-5) }
+  .cb__nuevo { border:var(--bw) dashed var(--border-strong); border-radius:var(--r-md);
+    padding:var(--sp-5); background:var(--surface-sand) }
+  details.cb__nuevo > summary { cursor:pointer; font-weight:var(--fw-semibold); list-style:none }
+  details.cb__nuevo > summary::-webkit-details-marker { display:none }
+
+  /* OJO CON step EN LOS PRECIOS: el navegador valida contra el, y con
+     step=100 rechaza CUALQUIER precio que no sea multiplo de 100 — o sea
+     todos los que terminan en 90, que es justo como se ponen los precios
+     aca. El mensaje que sale ("ingrese un valor valido") no explica nada y
+     parece un error del sitio. step=1 acepta cualquier monto entero, que es
+     lo unico que existe en pesos. */
+  .cb__campos { display:grid; gap:var(--sp-3); grid-template-columns:1fr }
+  @media (min-width:760px) { .cb__campos { grid-template-columns:2fr 130px 120px } }
+  .campo { display:flex; flex-direction:column; gap:4px }
+  .campo__et { font-size:.7rem; text-transform:uppercase; letter-spacing:.08em;
+    color:var(--text-muted); font-weight:var(--fw-semibold) }
+  .campo input, .campo select, .campo textarea {
+    padding:9px 11px; border:var(--bw) solid var(--border-strong);
+    border-radius:var(--r-sm); background:var(--surface-raised);
+    font:inherit; font-size:.9rem; color:var(--text-strong); width:100% }
+
+  .cb__fechas { display:grid; gap:var(--sp-3); grid-template-columns:1fr;
+    margin-top:var(--sp-3) }
+  @media (min-width:760px) { .cb__fechas { grid-template-columns:1fr 1fr } }
+
+  /* La lista de productos del combo: casillas, no un select multiple.
+     Un select multiple en el telefono es de las peores cosas que hay. */
+  .cb__prods { display:grid; gap:6px; margin-top:var(--sp-4);
+    max-height:260px; overflow:auto; padding:var(--sp-3);
+    border:var(--bw) solid var(--divider); border-radius:var(--r-sm);
+    background:var(--surface-raised) }
+  .cb__prod { display:flex; align-items:center; gap:9px; font-size:.86rem }
+  .cb__prod input[type=checkbox] { width:auto; flex:0 0 auto }
+  .cb__prod-nom { flex:1 1 auto; min-width:0; overflow-wrap:anywhere }
+  .cb__prod-cant { width:62px; flex:0 0 auto; padding:4px 7px; font-size:.82rem;
+    border:var(--bw) solid var(--border-strong); border-radius:var(--r-sm);
+    background:var(--surface-card) }
+  .cb__prod--off .cb__prod-nom { color:var(--text-muted); text-decoration:line-through }
+
+  /* HACE FALTA, no es de adorno: el navegador esconde lo que tiene el
+     atributo `hidden` con una regla propia (`display:none`), pero CUALQUIER
+     regla de autor que declare `display` le gana. Como .cb__prod declara
+     `display:flex`, el buscador marcaba las filas como hidden y seguian
+     viendose igual — parecia que el filtro no funcionaba. */
+  .cb__prod[hidden] { display:none }
+
+  .cb__fila { border-bottom:var(--bw) solid var(--divider); padding:var(--sp-4) 0 }
+  .cb__fila:last-of-type { border-bottom:0 }
+  .cb__top { display:flex; flex-wrap:wrap; gap:var(--sp-3); align-items:baseline;
+    justify-content:space-between }
+  .cb__nom { font-weight:var(--fw-bold); color:var(--lp-espresso) }
+  .cb__precio { font-family:var(--font-display); font-size:1.1rem; color:var(--lp-espresso) }
+  .cb__trae { font-size:.8rem; color:var(--text-muted); margin-top:3px }
+  .cb__meta { font-size:.76rem; color:var(--text-muted); margin-top:3px }
+
+  .chip { display:inline-block; font-size:.68rem; font-weight:var(--fw-bold);
+    text-transform:uppercase; letter-spacing:.02em; padding:2px 7px;
+    border-radius:999px; margin-left:6px; vertical-align:middle }
+  .chip--activo     { background:#DFF0E2; color:#2B6B3D }
+  .chip--programado { background:var(--lp-gold-bg); color:#9B0D23 }
+  .chip--pausado    { background:var(--surface-sand); color:var(--lp-coffee-600) }
+  .chip--terminado  { background:#F0E4E2; color:#A33A2E }
+  .chip--banner     { background:#E6EBF5; color:#33507F }
+
+  /* El aviso de ingrediente agotado. NO apaga el combo: avisa. */
+  .cb__ojo { font-size:.78rem; color:#9C4A16; background:#FBE6D4;
+    border-radius:var(--r-sm); padding:6px 9px; margin-top:var(--sp-3) }
+  .cb__acc { display:flex; flex-wrap:wrap; gap:var(--sp-2); margin-top:var(--sp-3) }
+  .peligro { color:#A33A2E; background:none; border:none; cursor:pointer;
+    font:inherit; font-size:.82rem; text-decoration:underline; padding:0 }
+  .cb__vacio { color:var(--text-muted); margin:0 }
+
+  /* El buscador de la lista de productos. La carta tiene decenas, y
+     encontrar «Flat White» bajando con la rueda es de las cosas que hacen
+     que una pantalla se sienta mal hecha. */
+  .cb__buscar { width:100%; padding:8px 11px; margin-bottom:6px;
+    border:var(--bw) solid var(--border-strong); border-radius:var(--r-sm);
+    background:var(--surface-card); font:inherit; font-size:.86rem }
+  .cb__buscar:focus-visible { outline:none; box-shadow:var(--shadow-focus) }
+  .cb__nada { font-size:.82rem; color:var(--text-muted); padding:var(--sp-2) }
+  /* Marca los que estan elegidos aunque el filtro los oculte: asi no se
+     pierde de vista lo que ya se selecciono al buscar otra cosa. */
+  .cb__prod--puesto { background:var(--lp-gold-bg); border-radius:var(--r-sm) }
+  .cb__sinfin { display:flex; align-items:center; gap:6px; font-size:.78rem;
+    color:var(--text-muted); margin-top:5px }
+  .cb__sinfin input { width:auto; flex:0 0 auto }
+  .cb__cuenta { font-weight:var(--fw-regular); text-transform:none;
+    letter-spacing:0; color:var(--text-muted) }
+
+  /* La pista explica el campo de al lado. Existe porque «orden» y
+     «prioridad» son dos cosas distintas que se parecen: una ordena la
+     seccion de la carta, la otra decide quien gana el banner. Sin esto hay
+     que preguntarle a alguien cual es cual. */
+  .cb__pista { font-size:.78rem; color:var(--text-muted); margin:var(--sp-2) 0 0;
+    max-width:62ch }
+  .cb__prio { display:flex; align-items:center; gap:7px; font-size:.85rem;
+    color:var(--text-muted) }
+  .cb__prio input { width:64px; padding:5px 8px; font:inherit; font-size:.85rem;
+    border:var(--bw) solid var(--border-strong); border-radius:var(--r-sm);
+    background:var(--surface-raised) }
+</style>
+{% endblock %}
+
+{% block contenido %}
+<main class="section"><div class="container" style="max-width:900px">
+  <div class="auth__eyebrow">Administración</div>
+  <h1 style="margin:6px 0 0">Packs de {{ marca.nombre }}</h1>
+  <p style="color:var(--text-muted);margin:var(--sp-2) 0 0;max-width:64ch">
+    Packs y kits: varios productos a un precio. Los productos
+    <b>siguen apareciendo en su categoría de siempre</b> — el pack los
+    referencia, no se los lleva. Para las categorías y los productos, anda a
+    <a href="{{ url_for('admin_carta', marca_slug=marca.slug) }}">el catálogo</a>.
+  </p>
+
+  <div class="cb">
+
+    {# ---------- Crear ---------- #}
+    <details class="cb__nuevo" {{ 'open' if not combos }}>
+      <summary>+ Crear un pack</summary>
+      <form method="POST" style="margin-top:var(--sp-4)"
+            action="{{ url_for('admin_combo_crear', marca_slug=marca.slug) }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+
+        <div class="cb__campos">
+          <div class="campo">
+            <label class="campo__et" for="c-nombre">Nombre</label>
+            <input id="c-nombre" name="nombre" maxlength="120" required
+                   placeholder="Kit de inicio" />
+          </div>
+          <div class="campo">
+            <label class="campo__et" for="c-precio">Precio CLP</label>
+            <input id="c-precio" name="precio_clp" type="number" min="0" step="1" value="0" />
+          </div>
+          <div class="campo">
+            <label class="campo__et" for="c-orden">Orden</label>
+            <input id="c-orden" name="orden" type="number" value="0" />
+          </div>
+        </div>
+        <p class="cb__pista">El orden más chico aparece primero dentro de la sección «Promos».</p>
+
+        <div class="campo" style="margin-top:var(--sp-3)">
+          <label class="campo__et" for="c-desc">Descripción (opcional)</label>
+          <input id="c-desc" name="descripcion" maxlength="300"
+                 placeholder="Válido de lunes a viernes hasta agotar stock" />
+        </div>
+
+        <div class="cb__fechas">
+          <div class="campo">
+            <label class="campo__et" for="c-inicio">Empieza</label>
+            <input id="c-inicio" name="inicio" type="datetime-local" required />
+          </div>
+          <div class="campo">
+            <label class="campo__et" for="c-fin">Termina</label>
+            <input id="c-fin" name="fin" type="datetime-local" required data-fin />
+            <label class="cb__sinfin">
+              <input type="checkbox" name="sin_termino" data-sinfin />
+              Sin fecha de término — corre hasta que lo apague
+            </label>
+          </div>
+        </div>
+
+        <p class="campo__et" style="margin:var(--sp-4) 0 0">
+          Qué trae <span class="cb__cuenta" data-cuenta>0 elegidos</span>
+        </p>
+        <div data-lista>
+          <input class="cb__buscar" type="search" data-buscar
+                 placeholder="Buscar producto…" aria-label="Buscar producto" />
+          <div class="cb__prods">
+            {% for p in productos %}
+            <label class="cb__prod {{ '' if p.disponible else 'cb__prod--off' }}"
+                   data-nombre="{{ p.nombre | lower }}">
+              <input type="checkbox" name="producto_id" value="{{ p.id }}" />
+              <span class="cb__prod-nom">{{ p.nombre }}</span>
+              <input class="cb__prod-cant" type="number" min="1" value="1"
+                     name="cantidad_{{ p.id }}" aria-label="Cantidad de {{ p.nombre }}" />
+            </label>
+            {% else %}
+            <p class="cb__vacio">Esta marca todavía no tiene productos en el catálogo.</p>
+            {% endfor %}
+            <p class="cb__nada" data-nada hidden>Ningún producto calza con eso. Los que ya elegiste siguen a la vista.</p>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-wrap:wrap;gap:var(--sp-4);margin-top:var(--sp-4)">
+          <label style="display:flex;gap:7px;align-items:center;font-size:.85rem">
+            <input type="checkbox" name="disponible" checked style="width:auto" /> Disponible
+          </label>
+          <label style="display:flex;gap:7px;align-items:center;font-size:.85rem"
+                 title="El banner de la portada lee este pack. No se copia nada: si cambias el precio o las fechas acá, el banner cambia solo.">
+            <input type="checkbox" name="mostrar_en_banner" style="width:auto" />
+            Mostrar en el banner de la portada
+          </label>
+          <label class="cb__prio">
+            Prioridad en el banner
+            <input name="prioridad" type="number" value="0" />
+          </label>
+        </div>
+        <p class="cb__pista">
+          En el banner se muestra <b>una sola</b> promo. Si hay varias vigentes
+          —combos marcados y las promos del panel— gana la de prioridad más
+          alta; si empatan, la que termina antes. Sin marcar la casilla, la
+          prioridad no hace nada.
+        </p>
+
+        <button class="btn btn--primary btn--sm" type="submit" style="margin-top:var(--sp-4)">
+          Crear pack
+        </button>
+      </form>
+    </details>
+
+    {# ---------- Los que hay ---------- #}
+    <section class="cb__caja">
+      {% if not combos %}
+      <p class="cb__vacio">
+        Todavía no hay packs. Crea el primero con «+ Crear un pack», acá arriba.
+      </p>
+      {% endif %}
+
+      {% for c in combos %}
+      <div class="cb__fila">
+        <div class="cb__top">
+          <div style="min-width:0">
+            <div class="cb__nom">
+              {{ c.nombre }}
+              <span class="chip chip--{{ c.estado }}">{{ c.estado }}</span>
+              {% if c.mostrar_en_banner %}<span class="chip chip--banner">en el banner</span>{% endif %}
+            </div>
+            <div class="cb__trae">
+              Trae: {% for i in c['items'] %}{{ i.cantidad }}× {{ i.producto_nombre }}{% if not loop.last %}, {% endif %}{% endfor %}
+            </div>
+            <div class="cb__meta">
+              {{ tiempo.largo(c.inicio_at) }} →
+              {% if c.fin_at %}{{ tiempo.largo(c.fin_at) }}{% else %}<b>sin término</b>, hasta que lo apagues{% endif %}
+            </div>
+          </div>
+          <div class="cb__precio">${{ c.precio_clp | miles }}</div>
+        </div>
+
+        {% if c.agotados %}
+        <p class="cb__ojo">
+          ⚠ {{ c.agotados | join(', ') }}
+          {{ 'está agotado' if c.agotados | length == 1 else 'están agotados' }} en el catálogo.
+          El pack <b>sigue visible</b> — apágalo tú si no lo puedes armar.
+        </p>
+        {% endif %}
+
+        <div class="cb__acc">
+          <form method="POST" action="{{ url_for('admin_combo_interruptor', marca_slug=marca.slug, combo_id=c.id) }}">
+            <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+            <button class="btn btn--sm" type="submit">
+              {{ 'Apagar' if c.disponible else 'Encender' }}
+            </button>
+          </form>
+          <details>
+            <summary class="btn btn--sm" style="display:inline-block;cursor:pointer">Editar</summary>
+            <form method="POST" style="margin-top:var(--sp-3)"
+                  action="{{ url_for('admin_combo_actualizar', marca_slug=marca.slug, combo_id=c.id) }}">
+              <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+              <div class="cb__campos">
+                <div class="campo">
+                  <label class="campo__et" for="e-nom-{{ c.id }}">Nombre</label>
+                  <input id="e-nom-{{ c.id }}" name="nombre" maxlength="120" required value="{{ c.nombre }}" />
+                </div>
+                <div class="campo">
+                  <label class="campo__et" for="e-pre-{{ c.id }}">Precio CLP</label>
+                  <input id="e-pre-{{ c.id }}" name="precio_clp" type="number" min="0" step="1" value="{{ c.precio_clp }}" />
+                </div>
+                <div class="campo">
+                  <label class="campo__et" for="e-ord-{{ c.id }}">Orden</label>
+                  <input id="e-ord-{{ c.id }}" name="orden" type="number" value="{{ c.orden }}" />
+                </div>
+              </div>
+              <div class="campo" style="margin-top:var(--sp-3)">
+                <label class="campo__et" for="e-des-{{ c.id }}">Descripción</label>
+                <input id="e-des-{{ c.id }}" name="descripcion" maxlength="300" value="{{ c.descripcion or '' }}" />
+              </div>
+              <div class="cb__fechas">
+                <div class="campo">
+                  <label class="campo__et" for="e-ini-{{ c.id }}">Empieza</label>
+                  <input id="e-ini-{{ c.id }}" name="inicio" type="datetime-local" required
+                         value="{{ tiempo.para_formulario(c.inicio_at) }}" />
+                </div>
+                <div class="campo">
+                  <label class="campo__et" for="e-fin-{{ c.id }}">Termina</label>
+                  <input id="e-fin-{{ c.id }}" name="fin" type="datetime-local"
+                         {{ '' if not c.fin_at else 'required' }} data-fin
+                         value="{{ tiempo.para_formulario(c.fin_at) if c.fin_at else '' }}" />
+                  <label class="cb__sinfin">
+                    <input type="checkbox" name="sin_termino" data-sinfin
+                           {{ 'checked' if not c.fin_at }} />
+                    Sin fecha de término — corre hasta que lo apague
+                  </label>
+                </div>
+              </div>
+
+              {% set dentro = c['items'] | map(attribute='producto_id') | list %}
+              <p class="campo__et" style="margin:var(--sp-4) 0 0">
+                Qué trae <span class="cb__cuenta" data-cuenta>0 elegidos</span>
+              </p>
+              <div data-lista>
+              <input class="cb__buscar" type="search" data-buscar
+                     placeholder="Buscar producto…" aria-label="Buscar producto" />
+              <div class="cb__prods">
+                {% for p in productos %}
+                <label class="cb__prod {{ '' if p.disponible else 'cb__prod--off' }}"
+                       data-nombre="{{ p.nombre | lower }}">
+                  <input type="checkbox" name="producto_id" value="{{ p.id }}"
+                         {{ 'checked' if p.id in dentro }} />
+                  <span class="cb__prod-nom">{{ p.nombre }}</span>
+                  <input class="cb__prod-cant" type="number" min="1" name="cantidad_{{ p.id }}"
+                         aria-label="Cantidad de {{ p.nombre }}"
+                         value="{{ (c['items'] | selectattr('producto_id', 'equalto', p.id) | map(attribute='cantidad') | first) or 1 }}" />
+                </label>
+                {% endfor %}
+                <p class="cb__nada" data-nada hidden>Ningún producto calza con eso. Los que ya elegiste siguen a la vista.</p>
+              </div>
+              </div>
+
+              <div style="display:flex;flex-wrap:wrap;gap:var(--sp-4);margin-top:var(--sp-4)">
+                <label style="display:flex;gap:7px;align-items:center;font-size:.85rem">
+                  <input type="checkbox" name="disponible" style="width:auto" {{ 'checked' if c.disponible }} /> Disponible
+                </label>
+                <label style="display:flex;gap:7px;align-items:center;font-size:.85rem">
+                  <input type="checkbox" name="mostrar_en_banner" style="width:auto" {{ 'checked' if c.mostrar_en_banner }} />
+                  Mostrar en el banner
+                </label>
+                <label class="cb__prio">
+                  Prioridad en el banner
+                  <input name="prioridad" type="number" value="{{ c.prioridad }}" />
+                </label>
+              </div>
+              <button class="btn btn--primary btn--sm" type="submit" style="margin-top:var(--sp-4)">Guardar</button>
+            </form>
+          </details>
+          <form method="POST" action="{{ url_for('admin_combo_eliminar', marca_slug=marca.slug, combo_id=c.id) }}"
+                onsubmit="return confirm('¿Eliminar el pack «{{ c.nombre }}»? Los productos no se tocan.')">
+            <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+            <button class="peligro" type="submit">Eliminar</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </section>
+
+  </div>
+</div></main>
+
+{#
+  El buscador de productos y la casilla «sin término». Vanilla, sin
+  dependencias, y escrito para que la página siga funcionando si el JS no
+  carga: sin él la lista sale entera (se puede usar, solo hay que
+  desplazarse) y la casilla igual manda `sin_termino` en el POST, que es
+  quien realmente decide. El JS solo es comodidad.
+#}
+<script>
+(function () {
+  'use strict';
+
+  /* Cada formulario —el de crear y el de cada combo— tiene su propia lista.
+     Se resuelven por separado para que buscar en uno no filtre el otro. */
+  Array.prototype.forEach.call(document.querySelectorAll('[data-lista]'), function (lista) {
+    var buscar = lista.querySelector('[data-buscar]');
+    var filas  = Array.prototype.slice.call(lista.querySelectorAll('.cb__prod'));
+    var nada   = lista.querySelector('[data-nada]');
+    var cuenta = (lista.closest('form') || document).querySelector('[data-cuenta]');
+
+    function marcados() {
+      return filas.filter(function (f) {
+        var c = f.querySelector('input[type=checkbox]');
+        return c && c.checked;
+      });
+    }
+
+    function pintarCuenta() {
+      var n = marcados().length;
+      filas.forEach(function (f) {
+        var c = f.querySelector('input[type=checkbox]');
+        f.classList.toggle('cb__prod--puesto', !!(c && c.checked));
+      });
+      if (cuenta) {
+        cuenta.textContent = n === 1 ? '1 elegido' : n + ' elegidos';
+      }
+    }
+
+    function filtrar() {
+      var q = (buscar.value || '').trim().toLowerCase();
+      var calzanTexto = 0;
+      filas.forEach(function (f) {
+        var c = f.querySelector('input[type=checkbox]');
+        var porTexto = !q || f.dataset.nombre.indexOf(q) !== -1;
+        /* Lo ya elegido NUNCA se oculta: si al buscar otra cosa
+           desapareciera de la vista, se pierde de vista lo que se lleva
+           puesto y es facil mandar el combo a medias. */
+        f.hidden = !(porTexto || (c && c.checked));
+        if (porTexto) { calzanTexto++; }
+      });
+      /* El aviso mira SOLO lo que calza con el texto, no lo que quedo
+         visible: con un producto ya elegido siempre habria algo en
+         pantalla, y "ningun producto calza" nunca llegaria a aparecer
+         aunque la busqueda no encontrara nada. */
+      if (nada) { nada.hidden = calzanTexto > 0; }
+    }
+
+    if (buscar) {
+      buscar.addEventListener('input', filtrar);
+      /* Enter dentro del buscador no debe mandar el formulario a medio
+         llenar: filtra y se queda. */
+      buscar.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); filtrar(); }
+      });
+    }
+    lista.addEventListener('change', pintarCuenta);
+    pintarCuenta();
+  });
+
+  /* «Sin fecha de término»: apaga el campo de fin y le saca el required,
+     porque un input deshabilitado y obligatorio impide enviar el formulario
+     sin decir por que. */
+  Array.prototype.forEach.call(document.querySelectorAll('[data-sinfin]'), function (casilla) {
+    var campo = (casilla.closest('.campo') || document).querySelector('[data-fin]');
+    if (!campo) { return; }
+    function aplicar() {
+      campo.disabled = casilla.checked;
+      campo.required = !casilla.checked;
+      campo.style.opacity = casilla.checked ? '.5' : '';
+    }
+    casilla.addEventListener('change', aplicar);
+    aplicar();
+  });
+})();
+</script>
+{% endblock %}

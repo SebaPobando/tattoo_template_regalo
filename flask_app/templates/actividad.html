@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block title %}{{ a.nombre }} · {{ negocio.nombre }}{% endblock %}
+{% block descripcion %}{{ a.descripcion[:150] if a.descripcion else a.nombre }}{% endblock %}
+
+{% block head_extra %}
+<style>
+  .ficha { max-width: 720px; }
+  .ficha__vuelta { display: inline-block; color: var(--text-muted);
+    text-decoration: none; font-size: .85rem; margin-bottom: var(--sp-4); }
+  .ficha__vuelta:hover { color: var(--lp-espresso); }
+  .ficha__datos { display: grid; gap: var(--sp-3); margin: var(--sp-5) 0;
+    padding: var(--sp-5); background: var(--surface-sand);
+    border-radius: var(--r-md); }
+  .dato { display: flex; gap: var(--sp-3); align-items: baseline; }
+  .dato__et { flex: none; width: 88px; font-size: .7rem; text-transform: uppercase;
+    letter-spacing: .1em; color: var(--text-muted); font-weight: var(--fw-semibold); }
+  .dato__v { color: var(--lp-espresso); font-weight: var(--fw-semibold); }
+  .ficha__desc { color: var(--text-body); line-height: 1.75; white-space: pre-line; }
+
+  /* El afiche ENTERO, con su proporcion natural. Estos afiches traen la fecha
+     y la hora dibujadas dentro: un object-fit: cover se comeria justo lo que
+     hay que leer. El tope de 420px es para que no se coma la pagina en un
+     monitor grande. */
+  .ficha__afiche { display: block; width: 100%; max-width: 420px; height: auto;
+    margin: var(--sp-5) 0; border-radius: var(--r-md);
+    border: var(--bw) solid var(--border); background: var(--surface-sand); }
+
+  .aviso { padding: var(--sp-4) var(--sp-5); border-radius: var(--r-md);
+    margin-top: var(--sp-5); }
+  .aviso--ok { background: #E7F0E9; color: #1D4A31; }
+  .aviso--no { background: #F5EAE8; color: #8E3226; }
+  .aviso b { font-weight: var(--fw-bold); }
+
+  .anotarse { margin-top: var(--sp-6); padding: var(--sp-5);
+    border: var(--bw) solid var(--border); border-radius: var(--r-md);
+    background: var(--surface-card); }
+  .anotarse__tit { font-family: var(--font-display); font-size: 1.15rem;
+    color: var(--lp-espresso); margin: 0 0 var(--sp-2); }
+  .anotarse__nota { color: var(--text-muted); font-size: .85rem;
+    margin: 0 0 var(--sp-4); }
+  .anotarse__campos { display: grid; gap: var(--sp-3); }
+  @media (min-width: 620px) { .anotarse__campos { grid-template-columns: 1fr 1fr; } }
+  .anotarse__campos .ancho-total { grid-column: 1 / -1; }
+</style>
+{% endblock %}
+
+{% block contenido %}
+<main class="section"><div class="container ficha">
+
+  <a class="ficha__vuelta" href="{{ url_for('actividades') }}">← Todas las actividades</a>
+
+  <div class="auth__eyebrow">
+    {% if a.marca_nombre %}{{ a.marca_nombre }}{% else %}{{ negocio.nombre_corto }}{% endif %}
+  </div>
+  <h1 style="margin:6px 0 0">{{ a.nombre }}</h1>
+
+  <div class="ficha__datos">
+    <div class="dato"><span class="dato__et">Cuándo</span>
+      <span class="dato__v">{{ a.cuando }}{% if a.termina %} — hasta {{ a.termina }}{% endif %}</span></div>
+    {% if a.lugar %}
+    <div class="dato"><span class="dato__et">Dónde</span>
+      <span class="dato__v">{{ a.lugar }}</span></div>
+    {% endif %}
+    <div class="dato"><span class="dato__et">Valor</span>
+      <span class="dato__v">{{ a.precio_fmt }}</span></div>
+    <div class="dato"><span class="dato__et">Cupos</span>
+      <span class="dato__v">
+        {% if a.agotada %}Sin cupos disponibles
+        {% else %}{{ a.libres }} de {{ a.cupos }} disponibles{% endif %}
+      </span></div>
+  </div>
+
+  {#
+    El afiche completo, sin recortar. Estos afiches traen la fecha y la hora
+    dibujadas dentro, así que un object-fit: cover se comería justo lo que hay
+    que leer. Por eso va con su proporción natural y un ancho máximo.
+  #}
+  {% if a.imagen_url %}
+  <img class="ficha__afiche" src="{{ a.imagen_url }}" loading="lazy"
+       alt="Afiche de {{ a.nombre }}" />
+  {% endif %}
+
+  {% if a.descripcion %}<p class="ficha__desc">{{ a.descripcion }}</p>{% endif %}
+
+  {# ------------------------------------------------------------------
+     Cuatro situaciones distintas y cada una dice algo distinto. Un solo
+     botón genérico obligaría a la persona a adivinar por qué no funciona.
+     ------------------------------------------------------------------ #}
+
+  {% if a.estado == 'cancelada' %}
+    <div class="aviso aviso--no"><b>Esta actividad fue cancelada.</b>
+      Si te habías inscrito, te contactamos.</div>
+
+  {% elif a.ya_paso or a.estado == 'realizada' %}
+    <div class="aviso aviso--no"><b>Esta actividad ya pasó.</b>
+      Mira la <a href="{{ url_for('actividades') }}">agenda</a> para las próximas.</div>
+
+  {# 'vencida' y 'cancelada' NO cuentan como tener cupo: en los dos casos hay
+     que poder tomar uno nuevo, y por eso caen al bloque de inscripción. #}
+  {% elif mia and mia.estado not in ('cancelada', 'vencida') %}
+    <div class="aviso aviso--ok">
+      <b>Ya tienes tu cupo.</b>
+      {% if mia.estado == 'pagada' %}Tu voucher está activo.
+      {% elif mia.estado == 'asistio' %}Nos vimos acá. ¡Gracias!
+      {% elif mia.estado == 'por_revisar' %}Estamos revisando tu comprobante.
+      {% elif a.precio_clp %}Falta que completes el formulario con tu comprobante.
+      {% else %}Te esperamos.{% endif %}
+    </div>
+    <div style="display:flex;gap:var(--sp-3);flex-wrap:wrap;align-items:center;
+                margin-top:var(--sp-3)">
+      {% if mia.voucher_codigo %}
+      <a class="btn btn--primary btn--sm"
+         href="{{ url_for('inscripcion', codigo=mia.voucher_codigo) }}">
+        {% if mia.estado in ('pagada', 'asistio') %}Ver mi voucher{% else %}Ver mi inscripción{% endif %}
+      </a>
+      {% endif %}
+      <form method="POST" action="{{ url_for('cancelar_inscripcion', slug=a.slug) }}"
+            onsubmit="return confirm('¿Cancelar tu cupo en «{{ a.nombre }}»?');">
+        <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+        <button class="btn btn--outline btn--sm" type="submit">Cancelar mi inscripción</button>
+      </form>
+    </div>
+
+  {% elif a.agotada %}
+    <div class="aviso aviso--no"><b>Se acabaron los cupos.</b>
+      Escríbenos y te avisamos si se libera alguno o si repetimos el curso.</div>
+
+  {% else %}
+    <div class="anotarse">
+      <h2 class="anotarse__tit">Inscríbete</h2>
+      {% if session.usuario %}
+        <p class="anotarse__nota">
+          Como <b>{{ session.usuario.email }}</b>.
+          {% if a.precio_clp %}Te contactamos para coordinar el pago.{% endif %}
+        </p>
+        <form method="POST" action="{{ url_for('inscribirme', slug=a.slug) }}">
+          <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+          <button class="btn btn--primary" type="submit">Tomar mi cupo</button>
+        </form>
+      {% else %}
+        <p class="anotarse__nota">
+          No necesitas cuenta. Déjanos tus datos y te guardamos el cupo —
+          si después creas tu cuenta con el mismo correo, esta inscripción
+          queda en tu historial.
+        </p>
+        <form method="POST" action="{{ url_for('inscribirme', slug=a.slug) }}" novalidate>
+          <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+          <div class="anotarse__campos">
+            <div class="field">
+              <label class="field__label" for="insNombre">Nombre</label>
+              <input class="field__input" id="insNombre" name="nombre" type="text"
+                     maxlength="45" autocomplete="given-name" required />
+            </div>
+            {# El celular NO es opcional para quien se inscribe sin cuenta:
+               es por donde le llega el voucher. Quien tiene cuenta lo ve en
+               «Mis cursos»; un invitado que cierra la pestaña no tiene
+               cómo volver si no podemos escribirle. #}
+            <div class="field">
+              <label class="field__label" for="insTel">Celular</label>
+              <input class="field__input" id="insTel" name="telefono" type="tel"
+                     inputmode="tel" maxlength="20" autocomplete="tel"
+                     placeholder="9 1234 5678" required />
+            </div>
+            <div class="field ancho-total">
+              <label class="field__label" for="insEmail">Correo</label>
+              <input class="field__input" id="insEmail" name="email" type="email"
+                     autocomplete="email" required />
+            </div>
+          </div>
+          <p class="anotarse__nota" style="margin:var(--sp-3) 0 0">
+            Te pedimos el celular porque por ahí te mandamos tu voucher.
+          </p>
+          <button class="btn btn--primary" type="submit" style="margin-top:var(--sp-4)">
+            Guardar mi cupo
+          </button>
+        </form>
+        <p class="anotarse__nota" style="margin:var(--sp-3) 0 0">
+          ¿Ya tienes cuenta? <a href="{{ url_for('login', next=url_for('actividad', slug=a.slug)) }}">Inicia sesión</a>.
+        </p>
+      {% endif %}
+    </div>
+  {% endif %}
+
+</div></main>
+{% endblock %}

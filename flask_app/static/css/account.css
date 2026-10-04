@@ -1,0 +1,205 @@
+/* Plantilla Cafetería — Cuenta / Dashboard / Backoffice (páginas de frontend, sin backend) */
+.container{max-width:var(--container);margin-inline:auto;padding-inline:var(--gutter)}
+.section{padding-block:var(--sp-8)}
+body{padding-top:68px}
+img{max-width:100%;display:block}
+
+/* --- Botones (idénticos a index.html) --- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--sp-2);font-family:var(--font-body);font-weight:var(--fw-semibold);font-size:.9375rem;line-height:1;letter-spacing:.01em;padding:14px 26px;border-radius:var(--r-pill);border:var(--bw-strong) solid transparent;cursor:pointer;text-decoration:none;transition:transform var(--dur-fast) var(--ease),filter var(--dur-fast) var(--ease),background var(--dur) var(--ease)}
+.btn:hover{filter:brightness(1.06)}
+.btn:active{transform:scale(.97)}
+.btn--primary{background:var(--lp-forest);color:var(--lp-cream-50);border-color:var(--lp-forest)}
+.btn--dark{background:var(--lp-espresso);color:var(--lp-cream-50);border-color:var(--lp-espresso)}
+.btn--gold{background:var(--lp-gold);color:#FFFFFF;border-color:var(--lp-gold)}
+.btn--outline{background:transparent;color:var(--lp-espresso);border-color:var(--border-strong)}
+.btn--lg{padding:17px 32px;font-size:1.0625rem}
+.btn--sm{padding:10px 18px;font-size:.8125rem}
+.btn--block{display:flex;width:100%}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* --- Header / nav (idéntico a index.html + slot de cuenta) --- */
+.header{position:fixed;top:0;left:0;right:0;z-index:50;border-bottom:var(--bw) solid var(--border)}
+.header::before{content:"";position:absolute;inset:0;z-index:-1;background:rgba(252,248,241,.92);backdrop-filter:blur(10px)}
+.header__inner{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);height:68px}
+.header__brand{display:inline-flex;align-items:baseline;gap:var(--sp-2);text-decoration:none}
+.header__brand-logo{height:36px;width:auto;object-fit:contain;border-radius:var(--r-sm);align-self:center}
+.footer__logo{height:76px;width:auto;object-fit:contain;margin-bottom:var(--sp-2);border-radius:var(--r-sm);cursor:pointer}
+.footer__bottom{cursor:pointer;user-select:none;-webkit-user-select:none}
+.jengibre-rain{position:fixed;inset:0;pointer-events:none;z-index:300;overflow:hidden}
+.jengibre-cookie{position:absolute;top:-8vh;width:30px;height:30px;opacity:0;animation:cookieFall linear forwards}
+.jengibre-cookie svg{width:100%;height:100%;display:block}
+@keyframes cookieFall{0%{opacity:0;transform:translateY(0) rotate(0deg)}8%{opacity:1}90%{opacity:1}100%{opacity:0;transform:translateY(112vh) rotate(360deg)}}
+.jengibre-card{position:fixed;left:50%;bottom:var(--sp-7);transform:translateX(-50%) translateY(12px);background:var(--lp-espresso);color:var(--text-on-dark);border:var(--bw) solid var(--lp-gold-soft);border-radius:var(--r-lg);padding:var(--sp-4) var(--sp-5);z-index:301;text-align:center;font-family:var(--font-body);font-size:.9rem;box-shadow:var(--shadow-lg);opacity:0;transition:opacity .3s var(--ease),transform .3s var(--ease);pointer-events:none}
+.jengibre-card.is-visible{opacity:1;transform:translateX(-50%) translateY(0)}
+.jengibre-card strong{color:var(--lp-gold-soft);font-family:var(--font-display);font-size:1.1rem;display:block;margin-bottom:2px}
+@media (prefers-reduced-motion: reduce){.jengibre-cookie{animation:none;opacity:1;top:40vh}}
+.header__brand-name{font-family:var(--font-display);font-size:1.5rem;color:var(--lp-espresso);line-height:1}
+.header__brand-tag{font-family:var(--font-body);font-weight:var(--fw-semibold);font-size:.6rem;letter-spacing:.36em;color:var(--lp-forest)}
+.nav{display:flex;align-items:center;gap:var(--sp-2)}
+.nav__link{font-family:var(--font-body);font-weight:var(--fw-semibold);font-size:.875rem;color:var(--lp-coffee-500);text-decoration:none;padding:8px 14px;border-radius:var(--r-pill);transition:background var(--dur) var(--ease),color var(--dur) var(--ease)}
+.nav__link:hover{background:var(--surface-sand);color:var(--lp-espresso)}
+.nav__points{display:inline-flex;align-items:center;gap:7px;background:var(--lp-gold-bg);color:#9B0D23;font-weight:var(--fw-bold);font-size:.8rem;padding:7px 13px;border-radius:var(--r-pill);text-decoration:none}
+.star-token{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--lp-gold);color:var(--lp-espresso);font-size:9px;font-weight:900;flex-shrink:0}
+.header__toggle{display:none;flex-direction:column;justify-content:center;gap:5px;width:44px;height:44px;border:var(--bw-strong) solid var(--border-strong);border-radius:var(--r-sm);background:transparent;cursor:pointer}
+.header__toggle span{display:block;width:20px;height:2px;margin-inline:auto;background:var(--lp-espresso);border-radius:2px}
+/* El menú pasa a hamburguesa en 1080px y no en 760px.
+   Medido: el menú necesita 723px y la marca 357px, o sea 1120px con el
+   espacio entre ambos. Por debajo de eso la marca se partía en dos líneas y
+   "Quiénes somos" y "Mi cuenta" se doblaban. Colapsar antes es mejor que
+   apretar. Si algún día agregas otro enlace, vuelve a medir. */
+@media(max-width:1200px){.nav{position:fixed;inset:68px 0 0 0;flex-direction:column;align-items:stretch;background:var(--surface-page);padding:var(--sp-4);gap:var(--sp-2);transform:translateY(-8px);opacity:0;pointer-events:none;transition:all var(--dur) var(--ease);overflow-y:auto}.nav--open{transform:none;opacity:1;pointer-events:auto}.header__toggle{display:flex}.nav__cta{width:100%;text-align:center;justify-content:center}}
+
+/* Nada de la barra se parte en dos líneas. La marca SÍ puede encogerse
+   (flex:none la dejaba fija y desbordaba en pantallas de 390px), lo que no
+   puede es partirse: para eso el nowrap. */
+.header__brand{flex:0 1 auto;min-width:0}
+.header__brand-name,.header__brand-tag{white-space:nowrap}
+.nav__link{white-space:nowrap}
+
+/* El componente .acct (pastilla + menu de cuenta) se movio a
+   cuenta-nav.css: ahora lo usan landing, base y producto. */
+
+/* --- Auth (registro / login / recuperar / verificar) --- */
+.auth{min-height:calc(100vh - 68px);display:flex;align-items:center;justify-content:center;padding-block:var(--sp-8)}
+.auth__card{width:100%;max-width:460px;background:var(--surface-card);border:var(--bw) solid var(--border);border-radius:var(--r-xl);box-shadow:var(--shadow-lg);padding:var(--sp-7) var(--sp-6)}
+.auth__mascot{width:64px;height:auto;object-fit:contain;margin-bottom:var(--sp-3)}
+.auth__eyebrow{font-weight:var(--fw-semibold);font-size:var(--fs-caption);letter-spacing:.14em;text-transform:uppercase;color:var(--lp-forest)}
+.auth__title{margin-block:6px var(--sp-2);font-size:clamp(1.5rem,4.2vw,2rem);overflow-wrap:break-word;word-break:break-word}
+.auth__lead{color:var(--text-muted);margin-bottom:var(--sp-5)}
+.auth__banner{display:flex;align-items:center;gap:var(--sp-3);background:var(--lp-gold-bg);border-radius:var(--r-md);padding:var(--sp-3) var(--sp-4);margin-bottom:var(--sp-5)}
+.auth__banner strong{font-family:var(--font-display);font-size:1.1rem;color:#9B0D23}
+.auth__foot{margin-top:var(--sp-5);text-align:center;font-size:.875rem;color:var(--text-muted)}
+.auth__foot a{color:var(--lp-forest);font-weight:var(--fw-semibold)}
+
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:var(--sp-4)}
+.field__label{font-size:.8rem;font-weight:var(--fw-semibold);color:var(--lp-espresso)}
+.field__input{font-family:var(--font-body);font-size:.9375rem;padding:13px 16px;border-radius:var(--r-md);border:var(--bw-strong) solid var(--border-strong);background:var(--surface-page);color:var(--text-strong);transition:border-color var(--dur) var(--ease),box-shadow var(--dur) var(--ease)}
+.field__input:focus{outline:none;border-color:var(--lp-forest);box-shadow:0 0 0 3px rgba(32,57,43,.18)}
+.field__input--error{border-color:var(--lp-danger)}
+.field__hint{font-size:.75rem;color:var(--text-muted)}
+.field__error{font-size:.75rem;color:var(--lp-danger);display:none}
+.field--invalid .field__error{display:block}
+.field__row{display:flex;gap:var(--sp-3)}
+.checkbox-row{display:flex;align-items:flex-start;gap:10px;font-size:.8rem;color:var(--text-muted);margin-bottom:var(--sp-5)}
+.checkbox-row input{margin-top:3px;accent-color:var(--lp-forest)}
+.checkbox-row a{color:var(--lp-forest);font-weight:var(--fw-semibold)}
+.field__between{display:flex;justify-content:space-between;align-items:center;font-size:.8rem;margin-bottom:var(--sp-5)}
+.field__between a{color:var(--lp-forest);font-weight:var(--fw-semibold)}
+.remember{display:flex;align-items:center;gap:8px;color:var(--text-muted)}
+.remember input{accent-color:var(--lp-forest)}
+
+.strength{height:5px;border-radius:99px;background:var(--surface-sand);overflow:hidden;margin-top:4px}
+.strength__bar{height:100%;width:0%;background:var(--lp-danger);border-radius:99px;transition:width var(--dur) var(--ease),background var(--dur) var(--ease)}
+.strength__label{font-size:.72rem;color:var(--text-muted);margin-top:4px}
+
+.alert{display:flex;gap:10px;align-items:flex-start;border-radius:var(--r-md);padding:var(--sp-3) var(--sp-4);font-size:.85rem;margin-bottom:var(--sp-4)}
+.alert--error{background:#FBEAE7;color:#8A2E22}
+.alert--success{background:#E7F1EA;color:#1F4A2C}
+.alert{display:none}
+.alert--visible{display:flex}
+
+.success-state{text-align:center;padding-block:var(--sp-6)}
+.success-state img{width:100px;height:auto;object-fit:contain;margin:0 auto var(--sp-4)}
+
+.stepper{display:flex;gap:8px;justify-content:center;margin-bottom:var(--sp-6)}
+.stepper__dot{width:8px;height:8px;border-radius:50%;background:var(--border-strong)}
+.stepper__dot--active{background:var(--lp-forest);width:22px;border-radius:99px}
+
+/* --- Dashboard --- */
+.dash{display:grid;gap:var(--sp-6);grid-template-columns:minmax(0,1fr)}
+@media(min-width:900px){.dash{grid-template-columns:1.4fr 1fr}}
+.balance-card{background:linear-gradient(135deg,var(--lp-forest),var(--lp-forest-900));color:var(--lp-cream-50);border-radius:var(--r-xl);padding:var(--sp-7);position:relative;overflow:hidden}
+.balance-card__eyebrow{font-size:var(--fs-caption);letter-spacing:.14em;text-transform:uppercase;color:var(--lp-gold-soft);font-weight:var(--fw-semibold)}
+.balance-card__amount{display:flex;align-items:center;gap:12px;font-family:var(--font-display);font-size:clamp(2.6rem,7vw,4rem);line-height:1;margin-block:var(--sp-3) 6px}
+.balance-card__star{width:40px;height:40px;border-radius:50%;background:var(--lp-gold);color:var(--lp-espresso);display:inline-flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:900;flex-shrink:0}
+.balance-card__equiv{color:rgba(252,248,241,.72);font-size:.9rem;margin-bottom:var(--sp-5)}
+.balance-card__actions{display:flex;flex-wrap:wrap;gap:var(--sp-3)}
+.balance-card__mascot{position:absolute;right:-6px;bottom:-10px;width:96px;height:auto;object-fit:contain;opacity:.9;pointer-events:none}
+
+.card{background:var(--surface-card);border:var(--bw) solid var(--border);border-radius:var(--r-lg);padding:var(--sp-5)}
+.card__title{margin-bottom:var(--sp-4)}
+
+.quick-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--sp-3)}
+.quick-link{display:flex;flex-direction:column;gap:8px;padding:var(--sp-4);border-radius:var(--r-md);border:var(--bw) solid var(--border);text-decoration:none;color:var(--lp-espresso);background:var(--surface-page);transition:transform var(--dur) var(--ease),box-shadow var(--dur) var(--ease)}
+.quick-link:hover{transform:translateY(-2px);box-shadow:var(--shadow-sm)}
+.quick-link__label{font-weight:var(--fw-semibold);font-size:.875rem}
+
+.table{width:100%;border-collapse:collapse;font-size:.875rem}
+.table th{text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);padding-block:8px;border-bottom:var(--bw) solid var(--border)}
+.table td{padding-block:12px;border-bottom:var(--bw) solid var(--divider);color:var(--text-body)}
+.table tr:last-child td{border-bottom:0}
+.movement__amount--pos{color:var(--lp-success);font-weight:var(--fw-semibold)}
+.movement__amount--neg{color:var(--lp-danger);font-weight:var(--fw-semibold)}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:.7rem;font-weight:var(--fw-semibold);padding:4px 10px;border-radius:99px}
+.badge--earn{background:#E7F1EA;color:#1F4A2C}
+.badge--buy{background:var(--lp-gold-bg);color:#9B0D23}
+.badge--redeem{background:#F1E7F0;color:#5A2E4F}
+
+.profile-grid{display:flex;align-items:center;gap:var(--sp-4);margin-bottom:var(--sp-5)}
+.profile-grid__avatar{width:56px;height:56px;border-radius:50%;background:var(--lp-forest);color:var(--lp-cream-50);display:inline-flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:1.4rem}
+.profile-grid__name{font-weight:var(--fw-bold);color:var(--lp-espresso)}
+.profile-grid__email{font-size:.85rem;color:var(--text-muted)}
+
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding-block:var(--sp-3);border-bottom:var(--bw) solid var(--divider)}
+.toggle-row:last-child{border-bottom:0}
+.switch{position:relative;width:42px;height:24px;flex-shrink:0}
+.switch input{opacity:0;width:0;height:0}
+.switch__track{position:absolute;inset:0;background:var(--border-strong);border-radius:99px;cursor:pointer;transition:background var(--dur) var(--ease)}
+.switch__track::before{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform var(--dur) var(--ease)}
+.switch input:checked + .switch__track{background:var(--lp-forest)}
+.switch input:checked + .switch__track::before{transform:translateX(18px)}
+
+.empty-state{text-align:center;padding:var(--sp-7) var(--sp-4);color:var(--text-muted)}
+.empty-state img{width:88px;height:auto;object-fit:contain;margin:0 auto var(--sp-3)}
+
+/* --- Toggle demo de sesión (flotante) --- */
+.demo-toggle{position:fixed;left:var(--sp-4);bottom:var(--sp-4);z-index:60;background:var(--lp-ink);color:var(--lp-cream-50);border:0;border-radius:var(--r-pill);padding:10px 16px;font-family:var(--font-body);font-size:.75rem;font-weight:var(--fw-semibold);cursor:pointer;box-shadow:var(--shadow-lg);display:inline-flex;align-items:center;gap:8px}
+.demo-toggle__dot{width:8px;height:8px;border-radius:50%;background:var(--lp-danger)}
+.demo-toggle--on .demo-toggle__dot{background:var(--lp-success)}
+
+/* --- Footer (idéntico a index.html) --- */
+.footer{background:var(--lp-espresso);color:rgba(252,248,241,.8);padding-block:var(--sp-8) var(--sp-5)}
+.footer__grid{display:grid;gap:var(--sp-6);grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+.footer__brand-name{font-family:var(--font-display);font-size:1.3rem;color:var(--lp-cream-50);line-height:1.15}
+.footer__text{font-size:.85rem;color:rgba(252,248,241,.6);max-width:26ch;overflow-wrap:anywhere}
+.footer__title{font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;color:var(--lp-gold-soft);margin-bottom:var(--sp-3)}
+.footer__list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.footer__link{color:rgba(252,248,241,.75);font-size:.875rem;text-decoration:none}
+.footer__link:hover{color:var(--lp-cream-50)}
+.footer__social{display:flex;gap:10px;margin-top:var(--sp-3)}
+.footer__social a{color:var(--lp-cream-50);width:38px;height:38px;border:var(--bw) solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;transition:background var(--dur) var(--ease)}
+.footer__social a:hover{background:rgba(255,255,255,.12)}
+.footer__bottom{max-width:var(--container);margin:var(--sp-7) auto 0;padding-inline:var(--gutter);border-top:var(--bw) solid rgba(252,248,241,.14);padding-top:var(--sp-5);font-size:.78rem;color:rgba(252,248,241,.5)}
+.footer__dev{display:inline-block;margin-top:6px;font-size:.78rem}
+.footer__dev strong{color:var(--text-on-dark);font-weight:var(--fw-semibold)}
+.footer__dev a{color:var(--text-on-dark);text-decoration:underline;text-underline-offset:2px}
+.footer__dev a:hover{color:var(--lp-gold-soft)}
+
+/* En un teléfono angosto, la marca completa (logo + nombre + COFFEE) más la
+   hamburguesa no caben. El "COFFEE" es lo prescindible: el logo y el nombre
+   ya identifican la marca. */
+@media(max-width:430px){.header__brand-tag{display:none}}
+
+/* --- Lo que todavía no existe -----------------------------------------------
+   La recarga de puntos no está construida (llega en la Fase 3, con
+   MercadoPago). Mientras tanto se anuncia, pero NO se ofrece como si
+   funcionara: un botón que lleva a una maqueta es peor que no tener botón.
+
+   Por eso el acceso rápido de recargar es un <div>, no un <a>: no se puede
+   pinchar ni recibe foco con el tabulador, así que no promete nada. */
+.balance-card__pronto{display:inline-block;margin-left:var(--sp-3);padding:3px 10px;border-radius:var(--r-pill);background:rgba(252,248,241,.16);color:var(--lp-cream-50);font-size:.62rem;font-weight:var(--fw-semibold);letter-spacing:.07em;text-transform:uppercase;vertical-align:2px}
+.quick-link--pronto{background:var(--surface-sand);border-style:dashed;border-color:var(--border-strong);cursor:default}
+.quick-link--pronto:hover{transform:none;box-shadow:none}
+.quick-link__pill{align-self:flex-start;background:var(--lp-gold-bg);color:#9B0D23;font-size:.6rem;font-weight:var(--fw-semibold);letter-spacing:.07em;text-transform:uppercase;padding:3px 9px;border-radius:var(--r-pill)}
+
+/* --- Formularios en el celular ----------------------------------------------
+   iOS agranda la página (zoom) al tocar un campo con letra de menos de 16px, y
+   al terminar de escribir la deja agrandada: el botón queda corrido o bajo el
+   teclado y hay que mover la página para poder tocarlo. Con 16px no hace zoom.
+   Además, en el celular la tarjeta de entrar/registrarse deja de centrarse en
+   vertical: el alto disponible cambia cuando el teclado se abre y se cierra, y
+   la tarjeta centrada se corría justo bajo el dedo. */
+@media (max-width:760px){
+  .field__input{font-size:16px}
+  .auth{min-height:0;align-items:flex-start;padding-block:var(--sp-6)}
+}

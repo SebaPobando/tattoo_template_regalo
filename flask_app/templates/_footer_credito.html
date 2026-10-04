@@ -1,0 +1,17 @@
+{# Crédito compartido por todos los footers.
+
+   No se quita, no se vuelve configurable y no se vacía por .env. Es la
+   firma de quien hizo el sitio y es una decisión del autor: va en todas las
+   instalaciones, en el footer (con el easter egg de las galletas) y en el
+   JSON-LD de la landing.
+
+   El id footerCredit lo usa el easter egg de account.js: cinco clics y
+   caen galletas de jengibre. No cambiarle el id. #}
+<div class="footer__bottom" id="footerCredit">
+  © 2026 {{ negocio.nombre }} · Hecho con cariño en el sur de Chile<br />
+  <span class="footer__dev">
+    Sitio diseñado y programado por
+    <a href="{{ negocio.credito.url }}" target="_blank" rel="noopener noreferrer"><strong>{{ negocio.credito.texto }}</strong></a>,
+    desarrollador en {{ negocio.credito.ciudad }}.
+  </span>
+</div>

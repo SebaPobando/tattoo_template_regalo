@@ -1,0 +1,303 @@
+{% extends "base.html" %}
+{% block title %}Ruleta · {{ negocio.nombre }}{% endblock %}
+{% block descripcion %}La ruleta de premios.{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ruleta.css') }}" />
+<style>
+  .rul { max-width: 900px; }
+  .caja { background: var(--surface-card); border: var(--bw) solid var(--border);
+    border-radius: var(--r-md); padding: var(--sp-5); margin-top: var(--sp-5); scroll-margin-top: 90px; }
+  .caja__tit { font-family: var(--font-display); font-size: 1.25rem; color: var(--lp-espresso); margin: 0 0 var(--sp-2); }
+  .caja__txt { color: var(--text-muted); font-size: .9rem; margin: 0 0 var(--sp-4); line-height: 1.55; }
+
+  /* --- Habilitar ------------------------------------------------------ */
+  .habilitar { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: stretch; }
+  .habilitar .field__input { flex: 1 1 220px; min-width: 0; }
+  .habilitar .btn { flex: 0 0 auto; }
+
+  /* El giro recién creado. Lo más grande de la página: es lo que se le
+     muestra al cliente. */
+  .nuevo { border: var(--bw-strong) solid var(--lp-forest); text-align: center; }
+  .nuevo__qr { width: 220px; max-width: 70%; margin: var(--sp-3) auto; }
+  .nuevo__qr svg { display: block; width: 100%; height: auto; }
+  .nuevo__qr path { fill: var(--lp-espresso); }
+  .nuevo__acciones { display: flex; flex-wrap: wrap; gap: var(--sp-2); justify-content: center; margin-top: var(--sp-3); }
+
+  /* --- Premios -------------------------------------------------------- */
+  .premios { display: grid; gap: var(--sp-5); }
+  @media (min-width: 760px) { .premios { grid-template-columns: 300px 1fr; align-items: start; } }
+  .gajos { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); counter-reset: gajo; }
+  .gajo { display: flex; gap: var(--sp-2); align-items: center; }
+  .gajo__num { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+    font-size: .78rem; font-weight: var(--fw-bold); border: 2px solid #111; }
+  .gajo .field__input { flex: 1 1 auto; min-width: 0; padding: 10px 12px; }
+  .gajo__quitar { flex: none; background: none; border: 0; color: var(--text-muted); font-size: 1.3rem;
+    width: 34px; height: 34px; cursor: pointer; border-radius: 50%; }
+  .gajo__quitar:hover { background: var(--surface-sand); color: var(--lp-espresso); }
+  .gajos__pie { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; margin-top: var(--sp-3); }
+  .gajos__cuenta { font-size: .82rem; color: var(--text-muted); }
+  .gajos__ojo { font-size: .82rem; color: #9B0D23; background: var(--lp-gold-bg); padding: 6px 10px;
+    border-radius: var(--r-sm); margin: var(--sp-3) 0 0; }
+  .gajos__ojo[hidden] { display: none; }
+
+  .prob { width: 100%; border-collapse: collapse; margin-top: var(--sp-4); font-size: .88rem; }
+  .prob th { text-align: left; font-size: .7rem; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--text-muted); font-weight: var(--fw-bold); padding: 6px 0; border-bottom: var(--bw) solid var(--divider); }
+  .prob td { padding: 7px 0; border-bottom: var(--bw) solid var(--divider); color: var(--lp-espresso); }
+  .prob td.num { text-align: right; font-variant-numeric: tabular-nums; color: var(--text-muted); white-space: nowrap; }
+  .prob th.num { text-align: right; }
+
+  /* --- Historial ------------------------------------------------------ */
+  .giro { display: flex; flex-wrap: wrap; gap: 4px var(--sp-3); align-items: center; justify-content: space-between;
+    padding: var(--sp-3) 0; border-bottom: var(--bw) solid var(--divider); scroll-margin-top: 90px; }
+  .giro:last-child { border-bottom: 0; }
+  .giro__info { min-width: 0; flex: 1 1 240px; }
+  .giro__premio { font-weight: var(--fw-bold); color: var(--lp-espresso); overflow-wrap: anywhere; }
+  .giro__meta { font-size: .78rem; color: var(--text-muted); }
+  .giro__acciones { display: flex; gap: var(--sp-2); align-items: center; }
+  .giro__acciones form { margin: 0; }
+  .etq { display: inline-block; font-size: .66rem; font-weight: var(--fw-bold); text-transform: uppercase;
+    letter-spacing: .04em; padding: 3px 9px; border-radius: var(--r-pill); background: var(--surface-sand);
+    color: var(--lp-coffee-600); margin-left: 6px; vertical-align: 1px; }
+  .etq--pendiente { background: var(--lp-gold-bg); color: #9B0D23; }
+  .etq--entregado { background: #E7F0E9; color: #1D4A31; }
+  .lnk { background: none; border: 0; padding: 6px 4px; font: inherit; font-size: .8rem;
+    color: var(--text-muted); text-decoration: underline; cursor: pointer; }
+  .conf { display: grid; gap: 0 var(--sp-4); }
+  @media (min-width: 640px) { .conf { grid-template-columns: 1fr 1fr; } }
+</style>
+{% endblock %}
+
+{% block contenido %}
+<main class="section"><div class="container rul">
+  <div class="auth__eyebrow">{{ 'Administración' if es_admin else 'Mesón' }}</div>
+  <h1 style="margin:6px 0 0">Ruleta</h1>
+  <p style="color:var(--text-muted);margin:var(--sp-2) 0 0;max-width:62ch">
+    Por compras sobre ${{ cfg.monto_minimo | miles }} en el local. Cada giro lo
+    habilitas tú desde acá y sirve una sola vez; el premio lo sortea el
+    servidor, con la misma probabilidad para cada gajo.
+  </p>
+
+  {% if nuevo %}
+  <section class="caja nuevo" id="nuevo">
+    <h2 class="caja__tit">Giro listo</h2>
+    <p class="caja__txt" style="margin:0">
+      Que lo escanee con su celular, o gíralo en este dispositivo.
+      Vale hasta las {{ nuevo.vence }}{% if nuevo.referencia %} · {{ nuevo.referencia }}{% endif %}.
+    </p>
+    {% if nuevo.qr %}<div class="nuevo__qr">{{ nuevo.qr | safe }}</div>{% endif %}
+    <div class="nuevo__acciones">
+      <a class="btn btn--primary" href="{{ url_for('ruleta_giro', codigo=nuevo.codigo) }}">Girar en este dispositivo</a>
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="caja" id="habilitar">
+    <h2 class="caja__tit">Habilitar un giro</h2>
+    {% if lista %}
+    <p class="caja__txt">Para quien acaba de pagar ${{ cfg.monto_minimo | miles }} o más. La referencia es opcional: el número de boleta, el monto o un nombre.</p>
+    <form method="POST" action="{{ url_for('admin_ruleta_habilitar') }}" class="habilitar">
+      <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+      <input class="field__input" name="referencia" maxlength="80" placeholder="Boleta 1234 · $42.500" aria-label="Referencia (opcional)" />
+      <button class="btn btn--primary" type="submit">Habilitar giro</button>
+    </form>
+    {% else %}
+    <p class="caja__txt" style="margin:0">{{ 'Primero escribe los premios de la ruleta, acá abajo.' if es_admin else 'Falta que el administrador escriba los premios.' }} Mientras falten no se pueden habilitar giros.</p>
+    {% endif %}
+  </section>
+
+  {% if es_admin %}
+  <section class="caja" id="premios">
+    <h2 class="caja__tit">Premios</h2>
+    <p class="caja__txt">
+      Un premio por gajo, en el orden en que aparecen en el sentido del reloj.
+      <b>Todos los gajos salen con la misma probabilidad</b>: para que un premio
+      salga más seguido, ponlo en más gajos. Si un gajo no regala nada,
+      escribe «Sigue participando».
+    </p>
+    <div class="premios">
+      <div>
+        {% if rueda.n %}
+        {% set tam = 'ruleta--chica' %}
+        {% include '_ruleta.html' %}
+        {% else %}
+        <p class="caja__txt" style="text-align:center;padding:var(--sp-6) 0">La ruleta aparece acá cuando guardes los premios.</p>
+        {% endif %}
+      </div>
+      <div>
+        <form method="POST" action="{{ url_for('admin_ruleta_premios') }}" id="formPremios">
+          <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+          <ol class="gajos" id="gajos">
+            {% set filas = premios if premios else [''] * 12 %}
+            {% for p in filas %}
+            <li class="gajo">
+              {% set c = paleta[loop.index0 % paleta|length] %}
+              <span class="gajo__num" style="background:{{ c.fondo }};color:{{ c.tinta }}"><span>{{ loop.index }}</span></span>
+              <input class="field__input" name="premio" maxlength="{{ largo_premio }}" value="{{ p }}"
+                     placeholder="Premio del gajo {{ loop.index }}" aria-label="Premio del gajo {{ loop.index }}" />
+              <button class="gajo__quitar" type="button" aria-label="Quitar este gajo">×</button>
+            </li>
+            {% endfor %}
+          </ol>
+          <p class="gajos__ojo" id="ojoColores" hidden>
+            Con {{ colores }} colores, la cantidad de gajos debería ser múltiplo de {{ colores }}
+            (por ejemplo 12): si no, el primero y el último quedan del mismo color y juntos.
+          </p>
+          <div class="gajos__pie">
+            <button class="btn btn--outline btn--sm" type="button" id="agregarGajo">+ Agregar gajo</button>
+            <span class="gajos__cuenta" id="cuentaGajos"></span>
+          </div>
+          <button class="btn btn--primary" type="submit" style="margin-top:var(--sp-4)">Guardar premios</button>
+        </form>
+
+        {% if probabilidades %}
+        <table class="prob">
+          <thead><tr><th>Premio</th><th class="num">Gajos</th><th class="num">Probabilidad</th></tr></thead>
+          <tbody>
+            {% for p in probabilidades %}
+            <tr><td>{{ p.premio }}</td><td class="num">{{ p.gajos }} de {{ rueda.n }}</td><td class="num">{{ p.pct }}%</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  {% else %}
+  {# El barista ve qué premios hay y cuánto sale cada uno, pero no los edita. #}
+  <section class="caja" id="premios">
+    <h2 class="caja__tit">Premios</h2>
+    {% if probabilidades %}
+    <table class="prob" style="margin-top:0">
+      <thead><tr><th>Premio</th><th class="num">Gajos</th><th class="num">Probabilidad</th></tr></thead>
+      <tbody>
+        {% for p in probabilidades %}
+        <tr><td>{{ p.premio }}</td><td class="num">{{ p.gajos }} de {{ rueda.n }}</td><td class="num">{{ p.pct }}%</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="caja__txt" style="margin:0">El administrador todavía no escribe los premios.</p>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  <section class="caja" id="historial">
+    <h2 class="caja__tit">Últimos giros</h2>
+    {% if not historial %}
+    <p class="caja__txt" style="margin:0">Todavía no se ha habilitado ningún giro.</p>
+    {% endif %}
+    {% for h in historial %}
+    <div class="giro" id="giro-{{ h.id }}">
+      <div class="giro__info">
+        <div class="giro__premio">
+          {% if h.estado == 'girado' %}{{ h.premio }}
+          {% elif h.estado == 'pendiente' %}Sin girar<span class="etq etq--pendiente">Vale hasta {{ h.vence }}</span>
+          {% elif h.estado == 'vencido' %}Sin girar<span class="etq">Vencido</span>
+          {% else %}Anulado<span class="etq">Anulado</span>{% endif %}
+          {% if h.entregado_at %}<span class="etq etq--entregado">Entregado</span>{% endif %}
+        </div>
+        <div class="giro__meta">
+          {{ h.cuando }}{% if h.referencia %} · {{ h.referencia }}{% endif %}{% if h.habilitado_nombre %} · habilitó {{ h.habilitado_nombre }}{% endif %} · {{ h.codigo }}
+        </div>
+      </div>
+      <div class="giro__acciones">
+        {% if h.estado == 'pendiente' %}
+        <a class="lnk" href="{{ url_for('admin_ruleta', nuevo=h.codigo) }}#nuevo">Ver QR</a>
+        {% if es_admin %}
+        <form method="POST" action="{{ url_for('admin_ruleta_anular', giro_id=h.id) }}">
+          <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+          <button class="lnk" type="submit">Anular</button>
+        </form>
+        {% endif %}
+        {% elif h.estado == 'girado' %}
+        <form method="POST" action="{{ url_for('admin_ruleta_entregado', giro_id=h.id) }}">
+          <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+          <input type="hidden" name="entregado" value="{{ '0' if h.entregado_at else '1' }}" />
+          {% if h.entregado_at %}
+          <button class="lnk" type="submit">Deshacer entrega</button>
+          {% else %}
+          <button class="btn btn--outline btn--sm" type="submit">Marcar entregado</button>
+          {% endif %}
+        </form>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </section>
+
+  {% if es_admin %}
+  <section class="caja" id="config">
+    <h2 class="caja__tit">Configuración</h2>
+    <form method="POST" action="{{ url_for('admin_ruleta_config') }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+      <div class="conf">
+        <div class="field">
+          <label class="field__label" for="monto_minimo">Compra mínima para girar ($)</label>
+          <input class="field__input" type="number" min="0" step="1" id="monto_minimo" name="monto_minimo" value="{{ cfg.monto_minimo }}" />
+          <span class="field__hint">Se muestra en la ruleta. La app no ve la boleta: lo revisa quien habilita.</span>
+        </div>
+        <div class="field">
+          <label class="field__label" for="vence_min">Un giro sin usar vence a los (minutos)</label>
+          <input class="field__input" type="number" min="5" max="1440" step="1" id="vence_min" name="vence_min" value="{{ cfg.vence_min }}" />
+        </div>
+      </div>
+      <button class="btn btn--outline" type="submit">Guardar</button>
+    </form>
+  </section>
+  {% endif %}
+</div></main>
+{% endblock %}
+
+{% block page_js %}
+{% if es_admin %}
+<script>
+/* Agregar y quitar gajos sin recargar. Sin JavaScript igual se pueden
+   editar los que hay; agregar o quitar es lo único que necesita esto. */
+(function () {
+  var lista = document.getElementById('gajos');
+  var paleta = {{ paleta | tojson }};
+  var max = {{ max_gajos }}, min = {{ min_gajos }};
+  var cuenta = document.getElementById('cuentaGajos');
+  var ojo = document.getElementById('ojoColores');
+  var agregar = document.getElementById('agregarGajo');
+
+  function renumerar() {
+    var filas = lista.querySelectorAll('.gajo');
+    filas.forEach(function (li, i) {
+      var num = li.querySelector('.gajo__num');
+      var c = paleta[i % paleta.length];
+      num.style.background = c.fondo;
+      num.style.color = c.tinta;
+      num.firstElementChild.textContent = i + 1;
+      var input = li.querySelector('input');
+      input.placeholder = 'Premio del gajo ' + (i + 1);
+      input.setAttribute('aria-label', 'Premio del gajo ' + (i + 1));
+      li.querySelector('.gajo__quitar').disabled = filas.length <= min;
+    });
+    var n = filas.length;
+    cuenta.textContent = n + ' gajos · cada uno sale 1 de cada ' + n + ' veces';
+    agregar.disabled = n >= max;
+    ojo.hidden = paleta.length < 2 || n % paleta.length === 0;
+  }
+
+  lista.addEventListener('click', function (e) {
+    var b = e.target.closest('.gajo__quitar');
+    if (!b) return;
+    b.closest('.gajo').remove();
+    renumerar();
+  });
+  agregar.addEventListener('click', function () {
+    var molde = lista.querySelector('.gajo').cloneNode(true);
+    molde.querySelector('input').value = '';
+    lista.appendChild(molde);
+    renumerar();
+    molde.querySelector('input').focus();
+  });
+  renumerar();
+})();
+</script>
+{% endif %}
+{% endblock %}

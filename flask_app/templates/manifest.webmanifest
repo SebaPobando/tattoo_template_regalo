@@ -1,0 +1,68 @@
+{#
+  El manifest de la PWA, armado desde config/negocio.py.
+
+  Se sirve por una ruta de Flask (`/manifest.webmanifest`) y no como archivo
+  estático para que el nombre, la descripción y los colores salgan de la
+  configuración del negocio. Todos los textos pasan por `tojson`, que los
+  entrecomilla y escapa: un nombre con comillas o con ñ no rompe el JSON.
+#}
+{
+  "name": {{ negocio.nombre | tojson }},
+  "short_name": {{ negocio.pwa_nombre | tojson }},
+  "description": {{ negocio.descripcion | tojson }},
+  "lang": "es-CL",
+  "dir": "ltr",
+  {#
+     `start_url` lleva ?origen=app para poder distinguir en los registros del
+     servidor cuánta gente entra desde el icono instalado. No lo lee nadie
+     más. `id` queda fijo en "/" para que cambiar el start_url más adelante
+     no cree una app distinta en el teléfono de quien ya la instaló.
+  #}
+  "start_url": "/?origen=app",
+  "scope": "/",
+  "id": "/",
+  "display": "standalone",
+  "theme_color": {{ negocio.colores.fondo | tojson }},
+  "background_color": {{ negocio.colores.fondo | tojson }},
+  "categories": ["food", "lifestyle"],
+  "icons": [
+    {
+      "src": "{{ url_for('static', filename='img/pwa/icono-192.png') }}",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "{{ url_for('static', filename='img/pwa/icono-512.png') }}",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "{{ url_for('static', filename='img/pwa/icono-maskable-512.png') }}",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Ver la carta",
+      "short_name": "Carta",
+      "url": "/?origen=app#carta",
+      "icons": [{ "src": "{{ url_for('static', filename='img/pwa/icono-192.png') }}", "sizes": "192x192" }]
+    },
+    {
+      "name": "Talleres y actividades",
+      "short_name": "Talleres",
+      "url": "/actividades?origen=app",
+      "icons": [{ "src": "{{ url_for('static', filename='img/pwa/icono-192.png') }}", "sizes": "192x192" }]
+    },
+    {
+      "name": "Mi cuenta",
+      "short_name": "Mi cuenta",
+      "url": "/dashboard?origen=app",
+      "icons": [{ "src": "{{ url_for('static', filename='img/pwa/icono-192.png') }}", "sizes": "192x192" }]
+    }
+  ]
+}

@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% block title %}Ruleta · {{ negocio.nombre }}{% endblock %}
+{% block descripcion %}Gira la ruleta de {{ negocio.nombre }}.{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ruleta.css') }}" />
+<style>
+  /* =====================================================================
+     La página de UN giro. Se abre en la tablet de la caja o en el celular
+     de quien compró (escaneando el QR del panel). Lo único que importa es
+     la ruleta y el botón; el resultado aparece debajo cuando se detiene.
+     ===================================================================== */
+  .giro { max-width: 520px; text-align: center; }
+  .giro__eyebrow { font-size: .72rem; letter-spacing: .14em; text-transform: uppercase;
+    font-weight: var(--fw-bold); color: var(--text-muted); }
+  .giro__titulo { margin: 6px 0 var(--sp-2); }
+  .giro__bajada { color: var(--text-muted); margin: 0 0 var(--sp-5); }
+
+  .giro__btn { margin-top: var(--sp-5); min-width: 220px; font-size: 1.15rem;
+    padding: 18px 40px; letter-spacing: .06em; text-transform: uppercase; }
+
+  .resultado { margin-top: var(--sp-6); padding: var(--sp-6) var(--sp-5);
+    border-radius: var(--r-lg); background: var(--surface-card);
+    border: var(--bw-strong) solid var(--lp-espresso); box-shadow: var(--shadow-md); }
+  .resultado[hidden] { display: none; }
+  .resultado--aparece { animation: resultadoAparece .45s var(--ease, ease) both; }
+  @keyframes resultadoAparece { from { opacity: 0; transform: translateY(12px) scale(.97); } }
+  .resultado__et { font-size: .72rem; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--text-muted); font-weight: var(--fw-bold); margin: 0; }
+  .resultado__premio { font-family: var(--font-body); font-weight: 800; font-size: clamp(1.6rem, 8vw, 2.4rem);
+    line-height: 1.1; color: var(--lp-espresso); margin: var(--sp-2) 0 var(--sp-3);
+    text-transform: uppercase; overflow-wrap: anywhere; }
+  .resultado__txt { margin: 0; color: var(--text-muted); font-size: .92rem; }
+  .resultado__codigo { margin: var(--sp-3) 0 0; font-size: .75rem; letter-spacing: .12em;
+    color: var(--text-muted); font-weight: var(--fw-bold); }
+
+  .aviso { margin-top: var(--sp-5); padding: var(--sp-4) var(--sp-5); border-radius: var(--r-md);
+    background: var(--surface-sand); color: var(--lp-coffee-600); }
+  .ruleta--apagada { opacity: .45; filter: grayscale(.6); }
+  .giro__admin { display: inline-block; margin-top: var(--sp-6); font-size: .85rem;
+    color: var(--text-muted); }
+
+  /* Papel picado al detenerse, con los colores de la ruleta. */
+  .picado { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 60; }
+  .picado i { position: absolute; top: -12px; width: 9px; height: 14px; border-radius: 2px;
+    animation: picadoCae linear forwards; }
+  @keyframes picadoCae { to { transform: translateY(105vh) rotate(720deg); } }
+  @media (prefers-reduced-motion: reduce) { .picado { display: none; } }
+</style>
+{% endblock %}
+
+{% block contenido %}
+<main class="section"><div class="container giro">
+  <div class="giro__eyebrow">{{ negocio.nombre }}</div>
+  <h1 class="giro__titulo">{{ '¡Gira la ruleta!' if g.estado == 'pendiente' else 'La ruleta' }}</h1>
+  {% if monto_minimo and g.estado == 'pendiente' %}
+  <p class="giro__bajada">Por tu compra sobre ${{ monto_minimo | miles }}. Todos los gajos tienen la misma suerte.</p>
+  {% endif %}
+
+  {% set tam = 'ruleta--apagada' if g.estado in ('vencido', 'anulado') else '' %}
+  {% include '_ruleta.html' %}
+
+  {% if g.estado == 'pendiente' %}
+  <button class="btn btn--primary giro__btn" type="button" id="btnGirar">Girar</button>
+  <p class="aviso" id="giroError" role="alert" hidden></p>
+  {% elif g.estado == 'vencido' %}
+  <p class="aviso">Este giro venció sin usarse. Pide en la caja que te habiliten otro.</p>
+  {% elif g.estado == 'anulado' %}
+  <p class="aviso">Este giro fue anulado.</p>
+  {% endif %}
+
+  <section class="resultado" id="resultado" aria-live="polite" {{ 'hidden' if g.estado != 'girado' }}>
+    <p class="resultado__et">Salió</p>
+    <p class="resultado__premio" id="resultadoPremio">{{ g.premio or '' }}</p>
+    <p class="resultado__txt">Muéstrale esta pantalla a quien te atendió.</p>
+    <p class="resultado__codigo">GIRO {{ g.codigo }}</p>
+  </section>
+
+  {% if es_personal %}
+  <a class="giro__admin" href="{{ url_for('admin_ruleta') }}">← Volver a la ruleta del panel</a>
+  {% endif %}
+</div></main>
+{% endblock %}
+
+{% block page_js %}
+{% if g.estado == 'pendiente' %}
+<script>
+/* La ruleta NO decide nada acá. Al tocar «Girar» se le pide el resultado al
+   servidor —que sortea con la misma probabilidad para cada gajo y lo deja
+   guardado— y recién entonces se anima la rueda hasta ese gajo. Si esta
+   página se recarga a mitad de camino, el servidor devuelve el mismo
+   resultado: el giro ya se gastó. */
+(function () {
+  var btn = document.getElementById('btnGirar');
+  var rueda = document.getElementById('rueda');
+  var marco = rueda.closest('.ruleta');
+  var errorEl = document.getElementById('giroError');
+  var premiosDibujados = {{ premios | tojson }};
+  var colores = {{ negocio.ruleta.colores | tojson }};
+  var url = {{ url_for('ruleta_girar', codigo=g.codigo) | tojson }};
+  var csrfToken = {{ csrf_token | tojson }};
+  var actual = {{ rotacion }};
+  var girando = false;
+
+  function picado() {
+    var capa = document.createElement('div');
+    capa.className = 'picado';
+    for (var i = 0; i < 70; i++) {
+      var p = document.createElement('i');
+      p.style.left = (Math.random() * 100) + 'vw';
+      p.style.background = colores[i % colores.length];
+      p.style.boxShadow = '0 0 0 1px rgba(0,0,0,.15)';
+      p.style.animationDuration = (1.6 + Math.random() * 1.6) + 's';
+      p.style.animationDelay = (Math.random() * .5) + 's';
+      capa.appendChild(p);
+    }
+    document.body.appendChild(capa);
+    setTimeout(function () { capa.remove(); }, 4200);
+  }
+
+  function mostrar(premio) {
+    var caja = document.getElementById('resultado');
+    document.getElementById('resultadoPremio').textContent = premio;
+    caja.hidden = false;
+    caja.classList.add('resultado--aparece');
+    marco.classList.remove('ruleta--girando');
+    if (navigator.vibrate) navigator.vibrate([90, 60, 160]);
+    picado();
+    // 'end': que se vea el resultado sin perder de vista la ruleta detenida.
+    caja.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }
+
+  function girar() {
+    if (girando) return;
+    girando = true;
+    btn.disabled = true;
+    btn.textContent = 'Girando…';
+    errorEl.hidden = true;
+
+    var datos = new URLSearchParams();
+    datos.append('csrf', csrfToken);
+    fetch(url, { method: 'POST', body: datos, credentials: 'same-origin' })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (res) {
+        if (!res.ok) throw new Error(res.d.error || 'No se pudo girar.');
+        var d = res.d;
+        // Si el admin cambió los premios desde que se abrió esta página,
+        // la rueda dibujada ya no es la que se giró: se recarga y la página
+        // muestra la ruleta correcta, detenida en el resultado.
+        if (JSON.stringify(d.premios) !== JSON.stringify(premiosDibujados)) {
+          location.reload();
+          return;
+        }
+        var n = d.premios.length, paso = 360 / n;
+        var centro = (d.indice + 0.5) * paso;
+        // Cae en un punto al azar dentro del gajo (no siempre en el medio),
+        // sin acercarse a los bordes para que no quede la duda de cuál fue.
+        var desvio = (Math.random() - 0.5) * paso * 0.7;
+        var destino = -centro + desvio;
+        var base = actual + 360 * 6;
+        var vuelta = ((destino - base) % 360 + 360) % 360;
+        actual = base + vuelta;
+
+        marco.classList.add('ruleta--girando');
+        rueda.classList.add('ruleta__rueda--girando');
+        rueda.addEventListener('transitionend', function fin() {
+          rueda.removeEventListener('transitionend', fin);
+          btn.remove();
+          mostrar(d.premio);
+        });
+        // Un cuadro de espera para que el navegador registre la transición
+        // antes del cambio de ángulo.
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            rueda.style.transform = 'rotate(' + actual + 'deg)';
+          });
+        });
+      })
+      .catch(function (e) {
+        girando = false;
+        btn.disabled = false;
+        btn.textContent = 'Girar';
+        errorEl.textContent = e.message;
+        errorEl.hidden = false;
+      });
+  }
+
+  btn.addEventListener('click', girar);
+  rueda.style.cursor = 'pointer';
+  rueda.addEventListener('click', girar);
+})();
+</script>
+{% endif %}
+{% endblock %}

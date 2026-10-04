@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Comunidad · {{ negocio.nombre }}{% endblock %}
+{% block descripcion %}Lo que la gente de {{ negocio.ciudad }} deja escrito sobre {{ negocio.nombre }}.{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/muro.css') }}" />
+{% endblock %}
+
+{% block contenido %}
+<main class="section"><div class="container">
+  <div class="auth__eyebrow">Muro</div>
+  <h1 style="margin:6px 0 var(--sp-2)">Muro de la comunidad</h1>
+  <p style="color:var(--text-muted);max-width:56ch;margin:0 0 var(--sp-6)">
+    Lo que la gente nos deja escrito. Todo pasa por nuestras manos antes de
+    publicarse.
+  </p>
+
+  {% with volver = 'muro' %}
+    {% include '_muro-form.html' %}
+  {% endwith %}
+
+  {#
+    Los propios, en cualquier estado, y solo para quien los escribio. Es la
+    unica forma de saber que un deseo esta esperando: para el resto del mundo
+    un mensaje pendiente y uno que nunca llego se ven igual.
+
+    Se muestran arriba del muro publico a proposito — quien acaba de enviar
+    algo viene a buscar justamente esto.
+  #}
+  {% if mios %}
+  <section style="margin-bottom:var(--sp-7)">
+    <h2 style="font-size:1.1rem;margin:0 0 var(--sp-4)">Tus mensajes</h2>
+    <div class="muro">
+      {% for m in mios %}
+      <article class="deseo deseo--propio deseo--{{ m.estado }}">
+        <p class="deseo__texto">{{ m.mensaje }}</p>
+        <div class="deseo__pie">
+          <span class="deseo__autor">{{ m.nickname }}</span>
+          <span class="deseo__estado deseo__estado--{{ m.estado }}">
+            {% if m.estado == 'pendiente' %}Esperando aprobación
+            {% elif m.estado == 'aprobado' %}Publicado
+            {% else %}No publicado{% endif %}
+          </span>
+          <span class="deseo__fecha">{{ m.cuando }}</span>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <h2 style="font-size:1.1rem;margin:0 0 var(--sp-4)">
+    {% if total %}{{ total }} mensaje{{ 's' if total != 1 }} en el muro{% else %}El muro{% endif %}
+  </h2>
+
+  {% if mensajes %}
+  <div class="muro">
+    {% for m in mensajes %}
+    <article class="deseo">
+      <p class="deseo__texto">{{ m.mensaje }}</p>
+      <div class="deseo__pie">
+        <span class="deseo__autor">{{ m.nickname }}</span>
+        <span class="deseo__fecha">{{ m.cuando }}</span>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+
+  {# Paginacion simple con enlaces: funciona sin JavaScript y cada pagina
+     tiene su propia URL, que es lo que se puede compartir y lo que indexa
+     un buscador. #}
+  {% if pagina > 1 or hay_mas %}
+  <div class="muro__pie">
+    {% if pagina > 1 %}
+    <a class="btn btn--outline" href="{{ url_for('muro', pagina=pagina - 1) }}">
+      &larr; Más nuevos
+    </a>
+    {% endif %}
+    {% if hay_mas %}
+    <a class="btn btn--outline" href="{{ url_for('muro', pagina=pagina + 1) }}">
+      Más antiguos &rarr;
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="muro__vacio">
+    {% if negocio.mascotas %}<img src="{{ mascota('en-construccion.png') }}" alt="" aria-hidden="true" />{% endif %}
+    <p style="margin:0 0 var(--sp-2)"><b>Todavía no hay nada en el muro.</b></p>
+    <p style="margin:0;font-size:.88rem">Sé la primera persona en dejar un mensaje.</p>
+  </div>
+  {% endif %}
+</div></main>
+{% endblock %}
+
+{% block page_js %}
+<script src="{{ url_for('static', filename='js/muro.js') }}"></script>
+{% endblock %}

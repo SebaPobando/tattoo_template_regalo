@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Mi credencial · {{ negocio.nombre }}{% endblock %}
+{% block descripcion %}Estamos preparando tu carnet digital con QR y saldo de {{ negocio.puntos.nombre }}. Vuelve pronto.{% endblock %}
+{% block contenido %}
+<main class="auth"><div class="auth__card">
+{% if negocio.mascotas %}<img class="auth__mascot" src="{{ mascota('en-construccion.png') }}" alt="" aria-hidden="true" />{% endif %}
+<div class="auth__eyebrow">Próximamente</div>
+<h1 class="auth__title">Tu credencial digital está en camino</h1>
+<p class="auth__lead">Estamos preparando tu carnet digital con QR y saldo de {{ negocio.puntos.nombre }}. Vuelve pronto.</p>
+<a class="btn btn--primary" href="{{ url_for('dashboard') }}">Volver al dashboard</a>
+</div></main>
+{% endblock %}

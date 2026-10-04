@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+{% block title %}Cuentas · Administración{% endblock %}
+{% block descripcion %}Administración de cuentas.{% endblock %}
+
+{% block head_extra %}
+<style>
+  /* Mismo lenguaje visual que admin_muro.html y admin_actividades.html.
+     Sigue en un <style> por lo mismo: es CSS de una sola pantalla de admin.
+     Cuando aparezca la cuarta, esto se extrae a un admin.css. */
+  .adm__cab { display:flex; flex-wrap:wrap; gap:var(--sp-3); align-items:baseline;
+    justify-content:space-between; margin-bottom:var(--sp-5) }
+  .adm__resumen { color:var(--text-muted); font-size:.9rem }
+
+  .buscador { display:flex; flex-wrap:wrap; gap:var(--sp-3); align-items:flex-end;
+    padding:var(--sp-4); background:var(--surface-sand);
+    border:var(--bw) solid var(--border); border-radius:var(--r-md);
+    margin-bottom:var(--sp-5) }
+  .buscador__campo { display:flex; flex-direction:column; gap:5px; min-width:0 }
+  .buscador__campo--ancho { flex:1 1 240px }
+  .buscador__et { font-size:.7rem; text-transform:uppercase; letter-spacing:.08em;
+    color:var(--text-muted); font-weight:var(--fw-semibold) }
+  .buscador input, .buscador select {
+    font:inherit; font-size:.9rem; padding:9px 11px; border-radius:var(--r-sm);
+    border:var(--bw) solid var(--border-strong); background:var(--surface-page);
+    color:var(--text-body); width:100% }
+  .buscador input:focus, .buscador select:focus { outline:2px solid var(--accent);
+    outline-offset:1px }
+
+  .fila { display:grid; gap:var(--sp-3); padding:var(--sp-4);
+    border:var(--bw) solid var(--border); border-radius:var(--r-md);
+    background:var(--surface-card); margin-bottom:var(--sp-3);
+    grid-template-columns:1fr }
+  @media (min-width:860px) { .fila { grid-template-columns:1fr auto; align-items:center } }
+  .fila--bloqueado { opacity:.66; border-style:dashed }
+
+  .quien__nombre { font-family:var(--font-display); font-size:1.15rem;
+    color:var(--lp-espresso); margin:0 0 2px; overflow-wrap:anywhere }
+  .quien__mail { font-size:.85rem; color:var(--text-muted); overflow-wrap:anywhere }
+  .quien__marcas { display:flex; flex-wrap:wrap; gap:var(--sp-2); align-items:center;
+    margin-top:var(--sp-3) }
+
+  .marca { font-size:.72rem; font-weight:var(--fw-bold); padding:3px 10px;
+    border-radius:var(--r-pill); letter-spacing:.02em }
+  .marca--cliente   { background:var(--surface-sand); color:var(--lp-coffee-500) }
+  .marca--barista   { background:#E7F0E9; color:#1D4A31 }
+  .marca--admin     { background:var(--lp-gold-bg); color:#9B0D23 }
+  .marca--invitado  { background:var(--surface-sand); color:var(--text-muted) }
+  .marca--activo    { background:#E7F0E9; color:#1D4A31 }
+  .marca--bloqueado { background:#F5EAE8; color:#8E3226 }
+  .marca--sinverif  { background:#FBE6D4; color:#9C4A16 }
+  .marca--fecha     { color:var(--text-muted); font-weight:var(--fw-semibold) }
+
+  .fila__acciones { display:flex; flex-wrap:wrap; gap:var(--sp-3); align-items:center }
+  .fila__acciones form { margin:0 }
+
+  /* Crear barista y la invitación recién hecha. */
+  .crear, .invita { margin-top:var(--sp-5); padding:var(--sp-5); border-radius:var(--r-md);
+    background:var(--surface-card); border:var(--bw) solid var(--border); }
+  .invita { border:var(--bw-strong) solid var(--lp-forest); scroll-margin-top:90px }
+  /* Aire entre «Crear cuenta de barista» y el buscador: sin esto quedaban pegados. */
+  .crear { margin-bottom:var(--sp-5) }
+  .crear > summary { cursor:pointer; font-weight:var(--fw-bold); color:var(--lp-espresso) }
+  .crear[open] > summary { margin-bottom:var(--sp-3) }
+  .crear__txt, .invita__txt { color:var(--text-muted); font-size:.88rem; margin:0 0 var(--sp-4); line-height:1.55 }
+  .crear__grid { display:grid; gap:0 var(--sp-4) }
+  @media (min-width:640px) { .crear__grid { grid-template-columns:1fr 1fr } }
+  .invita__tit { font-family:var(--font-display); font-size:1.2rem; color:var(--lp-espresso); margin:0 0 var(--sp-2) }
+  .invita__enlace { display:flex; gap:var(--sp-2); margin-bottom:var(--sp-3) }
+  .invita__enlace .field__input { flex:1 1 auto; min-width:0; font-size:.8rem; padding:10px 12px }
+  .fila__nota { font-size:.78rem; color:var(--text-muted); font-style:italic }
+
+  .aviso { padding:var(--sp-4); border-radius:var(--r-md);
+    background:var(--lp-gold-bg); color:#9B0D23; font-size:.85rem;
+    margin-bottom:var(--sp-4) }
+  .vacio { text-align:center; padding:var(--sp-7) var(--sp-4);
+    border:var(--bw) dashed var(--border-strong); border-radius:var(--r-md);
+    color:var(--text-muted) }
+</style>
+{% endblock %}
+
+{% block contenido %}
+<main class="section"><div class="container" style="max-width:980px">
+  <div class="adm__cab">
+    <div>
+      <div class="auth__eyebrow">Administración</div>
+      <h1 style="margin:6px 0 0">Cuentas</h1>
+    </div>
+    <p class="adm__resumen">
+      {{ conteo.total }} cuenta{{ 's' if conteo.total != 1 }} ·
+      {{ conteo.activo }} con acceso ·
+      {{ conteo.invitado }} sin registrarse ·
+      {{ conteo.bloqueado }} bloqueada{{ 's' if conteo.bloqueado != 1 }}
+    </p>
+  </div>
+
+  <p style="color:var(--text-muted);font-size:.88rem;margin:0 0 var(--sp-5);max-width:64ch">
+    Bloquear deja a alguien fuera del sitio: no puede entrar, no recibe enlaces
+    para recuperar su contraseña y no puede escribir en el muro. No se borra
+    nada, y se puede deshacer.
+  </p>
+
+  {# GET, no POST: así la búsqueda queda en la URL y se puede compartir,
+     guardar o recargar sin que el navegador pregunte por el reenvío. #}
+  {% if invitacion %}
+  <section class="invita" id="invitacion">
+    <h2 class="invita__tit">Mándale el enlace a {{ invitacion.nombre }}</h2>
+    <p class="invita__txt">
+      Con él elige su contraseña y queda como vendedor(a). Vence en {{ invitacion.horas }} horas
+      y sirve una sola vez.{% if invitacion.correo_enviado %} También le llegó a {{ invitacion.email }}.{% endif %}
+    </p>
+    <div class="invita__enlace">
+      <input class="field__input" id="enlaceInvitacion" value="{{ invitacion.enlace }}" readonly aria-label="Enlace de invitación" />
+      <button class="btn btn--outline btn--sm" type="button" id="copiarInvitacion">Copiar</button>
+    </div>
+    <a class="btn btn--primary btn--sm" href="{{ invitacion.wsp }}" target="_blank" rel="noopener noreferrer">Enviar por WhatsApp</a>
+  </section>
+  {% endif %}
+
+  <details class="crear" id="crear" {{ 'open' if request.args.get('crear') }}>
+    <summary>Crear cuenta de vendedor(a)</summary>
+    <p class="crear__txt">
+      Para alguien que trabaja en el local. No le inventas una contraseña: le llega
+      un enlace para que la elija. Si ya tiene cuenta en el sitio, búscala abajo y
+      toca «Hacer vendedor(a)».
+    </p>
+    <form method="POST" action="{{ url_for('admin_usuarios_crear_barista') }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+      <div class="crear__grid">
+        <div class="field">
+          <label class="field__label" for="cb_nombre">Nombre</label>
+          <input class="field__input" id="cb_nombre" name="nombre" maxlength="45" required autocomplete="off" />
+        </div>
+        <div class="field">
+          <label class="field__label" for="cb_apellido">Apellido (opcional)</label>
+          <input class="field__input" id="cb_apellido" name="apellido" maxlength="45" autocomplete="off" />
+        </div>
+        <div class="field">
+          <label class="field__label" for="cb_email">Correo</label>
+          <input class="field__input" id="cb_email" name="email" type="email" required autocomplete="off" />
+          <span class="field__hint">Con este correo va a entrar.</span>
+        </div>
+        <div class="field">
+          <label class="field__label" for="cb_tel">Celular (opcional)</label>
+          <input class="field__input" id="cb_tel" name="telefono" type="tel" inputmode="tel" placeholder="9 1234 5678" />
+          <span class="field__hint">Para mandarle el enlace por WhatsApp.</span>
+        </div>
+      </div>
+      <button class="btn btn--primary" type="submit">Crear y generar enlace</button>
+    </form>
+  </details>
+
+  <form class="buscador" method="GET" action="{{ url_for('admin_usuarios') }}">
+    <div class="buscador__campo buscador__campo--ancho">
+      <label class="buscador__et" for="busca">Buscar</label>
+      <input id="busca" name="busca" type="search" value="{{ busca }}"
+             placeholder="Correo, nombre, nickname o teléfono" autocomplete="off" />
+    </div>
+    <div class="buscador__campo">
+      <label class="buscador__et" for="rol">Rol</label>
+      <select id="rol" name="rol">
+        <option value="">Todos</option>
+        {% for r in ['cliente', 'barista', 'admin'] %}
+        <option value="{{ r }}" {{ 'selected' if rol == r }}>{{ 'vendedor(a)' if r == 'barista' else r }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="buscador__campo">
+      <label class="buscador__et" for="estado">Estado</label>
+      <select id="estado" name="estado">
+        <option value="">Todos</option>
+        {% for e in ['invitado', 'activo', 'bloqueado'] %}
+        <option value="{{ e }}" {{ 'selected' if estado == e }}>{{ e }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="buscador__campo">
+      <button class="btn btn--primary btn--sm" type="submit">Filtrar</button>
+    </div>
+    {% if busca or rol or estado %}
+    <div class="buscador__campo">
+      <a class="btn btn--outline btn--sm" href="{{ url_for('admin_usuarios') }}">Limpiar</a>
+    </div>
+    {% endif %}
+  </form>
+
+  {% if topado %}
+  <p class="aviso">
+    Se están mostrando las {{ tope }} cuentas más nuevas y hay más.
+    Usa el buscador para encontrar una en particular.
+  </p>
+  {% endif %}
+
+  {% if usuarios %}
+    {% for u in usuarios %}
+    <article class="fila fila--{{ u.estado }}">
+      <div>
+        <h2 class="quien__nombre">{{ u.etiqueta }}</h2>
+        <div class="quien__mail">{{ u.email }}{% if u.telefono %} · {{ u.telefono }}{% endif %}</div>
+        <div class="quien__marcas">
+          <span class="marca marca--{{ u.rol }}">{{ 'vendedor(a)' if u.rol == 'barista' else u.rol }}</span>
+          <span class="marca marca--{{ u.estado }}">{{ u.estado }}</span>
+          {% if not u.verificado %}
+          <span class="marca marca--sinverif">Correo sin confirmar</span>
+          {% endif %}
+          <span class="marca marca--fecha">Desde el {{ u.desde }}</span>
+        </div>
+      </div>
+
+      <div class="fila__acciones">
+        {% if u.intocable %}
+        {# Las cuentas de admin no se tocan desde acá. Es la regla que impide
+           que el panel deje el sistema sin administradores. #}
+        <span class="fila__nota">Cuenta de administrador</span>
+
+        {% elif u.invitacion_pendiente %}
+        <span class="fila__nota">Todavía no crea su contraseña</span>
+        <a class="btn btn--outline btn--sm" href="{{ url_for('admin_usuarios', invitado=u.id) }}#invitacion">Nuevo enlace</a>
+        <form method="POST" action="{{ url_for('admin_usuarios_bloquear', usuario_id=u.id) }}">
+          <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+          <input type="hidden" name="busca" value="{{ busca }}" />
+          <input type="hidden" name="rol" value="{{ rol or '' }}" />
+          <input type="hidden" name="estado" value="{{ estado or '' }}" />
+          <button class="btn btn--outline btn--sm" type="submit">Cancelar acceso</button>
+        </form>
+
+        {% elif u.estado == 'bloqueado' %}
+        <form method="POST" action="{{ url_for('admin_usuarios_desbloquear', usuario_id=u.id) }}">
+          <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+          <input type="hidden" name="busca" value="{{ busca }}" />
+          <input type="hidden" name="rol" value="{{ rol or '' }}" />
+          <input type="hidden" name="estado" value="{{ estado or '' }}" />
+          <button class="btn btn--primary btn--sm" type="submit">Devolver el acceso</button>
+        </form>
+
+        {% else %}
+        {% if u.estado == 'activo' %}
+        <form method="POST" action="{{ url_for('admin_usuarios_rol', usuario_id=u.id) }}">
+          <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+          <input type="hidden" name="nuevo_rol" value="{{ 'cliente' if u.rol == 'barista' else 'barista' }}" />
+          <input type="hidden" name="busca" value="{{ busca }}" />
+          <input type="hidden" name="rol" value="{{ rol or '' }}" />
+          <input type="hidden" name="estado" value="{{ estado or '' }}" />
+          <button class="btn btn--outline btn--sm" type="submit">{{ 'Quitar vendedor(a)' if u.rol == 'barista' else 'Hacer vendedor(a)' }}</button>
+        </form>
+        {% endif %}
+        <form method="POST" action="{{ url_for('admin_usuarios_bloquear', usuario_id=u.id) }}"
+              onsubmit="return confirm('Se bloquea {{ u.email }}. Podrás deshacerlo cuando quieras.')">
+          <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+          <input type="hidden" name="busca" value="{{ busca }}" />
+          <input type="hidden" name="rol" value="{{ rol or '' }}" />
+          <input type="hidden" name="estado" value="{{ estado or '' }}" />
+          <button class="btn btn--outline btn--sm" type="submit">Bloquear</button>
+        </form>
+        {% endif %}
+      </div>
+    </article>
+    {% endfor %}
+
+  {% else %}
+  <div class="vacio">
+    {% if busca or rol or estado %}
+    <p style="margin:0"><b>Ninguna cuenta calza con eso.</b></p>
+    <p style="margin:var(--sp-2) 0 0;font-size:.88rem">Prueba con menos filtros.</p>
+    {% else %}
+    <p style="margin:0">Todavía no hay cuentas.</p>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <p style="margin-top:var(--sp-6)">
+    <a class="btn btn--outline btn--sm" href="{{ url_for('admin_inicio') }}">
+      &larr; Volver al panel
+    </a>
+  </p>
+</div></main>
+{% endblock %}
+
+{% block page_js %}
+{% if invitacion %}
+<script>
+/* Copiar el enlace de invitación. Si el navegador no deja usar el
+   portapapeles (página sin https en el celular, por ejemplo), selecciona el
+   texto para que se copie a mano. */
+(function () {
+  var btn = document.getElementById('copiarInvitacion');
+  var campo = document.getElementById('enlaceInvitacion');
+  btn.addEventListener('click', function () {
+    var listo = function () { btn.textContent = '¡Copiado!'; setTimeout(function () { btn.textContent = 'Copiar'; }, 1800); };
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(campo.value).then(listo, function () { campo.select(); });
+    } else {
+      campo.select(); try { document.execCommand('copy'); listo(); } catch (e) {}
+    }
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

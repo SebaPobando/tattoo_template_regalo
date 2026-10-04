@@ -1,0 +1,86 @@
+/* ===========================================================================
+   Plantilla Tienda de Tatuaje — Typography tokens
+   Display: Anton (condensada, de cartel, como un flash de tatuaje) para h1–h3.
+   Body:    Montserrat (sans geométrica y limpia) para párrafos e interfaz.
+
+   Anton viene en el proyecto (static/fonts, licencia SIL Open Font) y no de
+   Google: la letra de los títulos ES la identidad, y si no llega se ve como
+   cualquier sitio. Son 18 KB.
+   =========================================================================== */
+@font-face {
+  font-family: 'Anton'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url('../../fonts/anton-latin-400-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+                 U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193,
+                 U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Anton'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url('../../fonts/anton-latin-ext-400-normal.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB,
+                 U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+:root {
+  /* Families */
+  --font-display: 'Anton', 'Impact', 'Arial Narrow', system-ui, sans-serif;
+  --font-body: 'Montserrat', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* Weights (Montserrat) */
+  --fw-regular: 400; /* @kind font */
+  --fw-medium: 500; /* @kind font */
+  --fw-semibold: 600; /* @kind font */
+  --fw-bold: 700; /* @kind font */
+
+  /* Type scale — mobile-first, fluid via clamp() */
+  --fs-display:  clamp(2.75rem, 8vw, 4.5rem);   /* @kind font */
+  --fs-h1:       clamp(2.1rem, 6vw, 3.25rem);   /* @kind font */
+  --fs-h2:       clamp(1.65rem, 4.5vw, 2.4rem); /* @kind font */
+  --fs-h3:       clamp(1.3rem, 3.5vw, 1.7rem);  /* @kind font */
+  --fs-lead:     clamp(1.05rem, 2.4vw, 1.2rem); /* @kind font */
+  --fs-body:     1rem;       /* @kind font */
+  --fs-small:    0.875rem;   /* @kind font */
+  --fs-caption:  0.75rem;    /* @kind font */
+
+  /* Line heights */
+  --lh-display: 0.98; /* @kind font */
+  --lh-heading: 1.06; /* @kind font */
+  --lh-body: 1.6; /* @kind font */
+  --lh-tight: 1.3; /* @kind font */
+
+  /* Letter spacing — Anton is tight; a little air helps when large */
+  --ls-display: 0.01em; /* @kind font */
+  --ls-eyebrow: 0.18em; /* @kind font */ /* uppercase Montserrat eyebrows/labels */
+  --ls-body: 0; /* @kind font */
+}
+
+/* Base element defaults --------------------------------------------------- */
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-weight: 400;            /* Anton weight is baked into the glyphs */
+  line-height: var(--lh-heading);
+  letter-spacing: var(--ls-display);
+  text-transform: uppercase;   /* de cartel, como un flash */
+  color: var(--text-strong);
+  margin: 0;
+}
+h1 { font-size: var(--fs-h1); line-height: var(--lh-display); }
+h2 { font-size: var(--fs-h2); }
+h3 { font-size: var(--fs-h3); }
+
+h4, h5, h6 {
+  font-family: var(--font-body);
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-tight);
+  margin: 0;
+}
+
+/* Eyebrow / overline label */
+.lp-eyebrow {
+  font-family: var(--font-body);
+  font-weight: var(--fw-semibold);
+  font-size: var(--fs-caption);
+  letter-spacing: var(--ls-eyebrow);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}

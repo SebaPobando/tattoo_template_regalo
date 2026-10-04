@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Suscripción · {{ negocio.nombre }}{% endblock %}
+{% block descripcion %}La suscripción mensual de insumos está en construcción.{% endblock %}
+{% block contenido %}
+<main class="auth"><div class="auth__card">
+{% if negocio.mascotas %}<img class="auth__mascot" src="{{ mascota('en-construccion.png') }}" alt="" aria-hidden="true" />{% endif %}
+<div class="auth__eyebrow">Próximamente</div>
+<h1 class="auth__title">{{ negocio.puntos.nombre }}</h1>
+<p class="auth__lead">Estamos armando una suscripción mensual: tus insumos de siempre, listos cada mes.</p>
+<a class="btn btn--primary" href="{{ url_for('dashboard') }}">Volver al dashboard</a>
+</div></main>
+{% endblock %}

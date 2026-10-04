@@ -1,0 +1,209 @@
+/* ===========================================================================
+   Plantilla Cafetería — Muro de deseos (.muro / .deseo / .muro-form)
+   ---------------------------------------------------------------------------
+   Lo comparten la seccion #muro de la landing y la pagina /muro. Se escribio
+   compartido desde el principio, no extraido despues: es la misma leccion que
+   dejo agenda.css, donde el CSS vivio en un <style> hasta que aparecio el
+   segundo consumidor.
+
+   Mobile first. Todo con variables del design system: cuando cambie la paleta
+   este archivo no se toca.
+   =========================================================================== */
+
+/* --------------------------------------------------------------- la grilla */
+
+.muro { display: grid; gap: var(--sp-4); }
+
+@media (min-width: 720px) {
+  .muro { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (min-width: 1080px) {
+  .muro { grid-template-columns: repeat(3, 1fr); }
+}
+
+.muro[hidden], .muro__pie[hidden], .muro__vacio[hidden] { display: none; }
+
+
+/* ------------------------------------------------------------- la tarjeta */
+
+.deseo {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-5);
+  padding-top: var(--sp-6);
+  background: var(--surface-card);
+  border: var(--bw) solid var(--border);
+  border-radius: var(--r-md);
+  transition: border-color var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+
+.deseo:hover { border-color: var(--lp-forest); transform: translateY(-2px); }
+
+/* La comilla de apertura, decorativa. Va en ::before y no en el HTML para
+   que no la lea un lector de pantalla ni se copie al seleccionar el texto. */
+.deseo::before {
+  content: "\201C";
+  position: absolute;
+  top: 2px;
+  left: var(--sp-4);
+  font-family: var(--font-display);
+  font-size: 3.4rem;
+  line-height: 1;
+  color: var(--border-strong);
+  pointer-events: none;
+}
+
+.deseo__texto {
+  margin: 0;
+  color: var(--lp-coffee-700);
+  font-size: .98rem;
+  line-height: 1.65;
+  /* El mensaje viene de la base y ya va limpio a una sola linea, pero una
+     palabra sin espacios de 280 caracteres desbordaria la tarjeta igual. */
+  overflow-wrap: anywhere;
+}
+
+.deseo__pie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-2);
+  margin-top: auto;          /* pega el pie abajo: las tarjetas emparejan */
+  padding-top: var(--sp-2);
+  border-top: var(--bw) solid var(--border);
+}
+
+.deseo__autor {
+  font-family: var(--font-display);
+  font-size: 1.02rem;
+  color: var(--lp-espresso);
+  /* Un nickname de 45 caracteres no puede empujar la fecha fuera. */
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.deseo__fecha { color: var(--text-muted); font-size: .78rem; margin-left: auto; }
+
+/* Estado, solo en los propios. En el muro publico no existe: todo lo que se
+   ve ahi esta aprobado por definicion. */
+.deseo__estado {
+  font-size: .72rem;
+  font-weight: var(--fw-bold);
+  padding: 4px 11px;
+  border-radius: var(--r-pill);
+  letter-spacing: .02em;
+}
+
+.deseo__estado--pendiente { background: var(--lp-gold-bg); color: #9B0D23; }
+.deseo__estado--aprobado  { background: #E3EFE6; color: #2A6B3C; }
+.deseo__estado--rechazado { background: #F0E4E2; color: #A33A2E; }
+
+.deseo--propio { border-style: dashed; }
+.deseo--propio.deseo--aprobado { border-style: solid; }
+
+
+/* ----------------------------------------------------------- el formulario */
+
+.muro-form {
+  padding: var(--sp-5);
+  background: var(--surface-sand);
+  border: var(--bw) solid var(--border);
+  border-radius: var(--r-md);
+  margin-bottom: var(--sp-6);
+}
+
+.muro-form__fila { display: grid; gap: var(--sp-3); }
+
+@media (min-width: 720px) {
+  /* El nickname es corto y el mensaje largo: no merecen la misma columna. */
+  .muro-form__fila { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
+}
+
+.muro-form__campo { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+
+.muro-form__label {
+  font-size: .78rem;
+  font-weight: var(--fw-bold);
+  color: var(--text-muted);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.muro-form__input,
+.muro-form__area {
+  width: 100%;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: .95rem;
+  color: var(--lp-coffee-700);
+  background: var(--surface-card);
+  border: var(--bw) solid var(--border-strong);
+  border-radius: var(--r-sm);
+}
+
+.muro-form__input:focus,
+.muro-form__area:focus {
+  outline: 2px solid var(--lp-forest);
+  outline-offset: 1px;
+  border-color: var(--lp-forest);
+}
+
+.muro-form__area { resize: vertical; min-height: 84px; }
+
+.muro-form__pie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
+}
+
+.muro-form__contador { font-size: .78rem; color: var(--text-muted); margin-left: auto; }
+.muro-form__contador--tope { color: #A33A2E; font-weight: var(--fw-bold); }
+
+.muro-form__nota {
+  margin: var(--sp-3) 0 0;
+  font-size: .82rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+/* Lo que ve quien no ha entrado: la invitacion, no el formulario. */
+.muro-form--invitado { text-align: center; }
+.muro-form--invitado p { margin: 0 0 var(--sp-3); color: var(--text-muted); }
+
+
+/* ------------------------------------------------------------ estado vacio */
+
+.muro__vacio {
+  text-align: center;
+  padding: var(--sp-7) var(--sp-4);
+  border: var(--bw) dashed var(--border-strong);
+  border-radius: var(--r-md);
+  color: var(--text-muted);
+}
+
+/* El reset del design system pone img { display: block }: sin el margin auto
+   el text-align del padre no la centra. Misma trampa que en .sin-nada. */
+.muro__vacio img { width: 90px; height: auto; margin: 0 auto var(--sp-3); }
+
+.muro__pie { margin-top: var(--sp-5); display: flex; gap: var(--sp-3); flex-wrap: wrap; }
+
+
+/* --- Con que nombre se firma ------------------------------------------------
+   Ya no es un campo: es el nombre para mostrar de la cuenta. Se enseña igual,
+   y ANTES de enviar, para que nadie se lleve la sorpresa de ver publicado un
+   nombre que no esperaba. */
+
+.muro-form__fila--solo-mensaje { grid-template-columns: minmax(0, 1fr); }
+
+.muro-form__firma {
+  font-size: .82rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.muro-form__firma b { color: var(--lp-espresso); }

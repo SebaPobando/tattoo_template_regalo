@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Vales · {{ lote.nombre }}{% endblock %}
+{% block descripcion %}Hoja de vales para imprimir.{% endblock %}
+
+{% block head_extra %}
+<style>
+  /* =====================================================================
+     La hoja de un evento: todos sus vales con QR, para imprimir y recortar.
+     En pantalla se ve como una grilla; al imprimir desaparece todo lo del
+     sitio (menú, pie, botones) y quedan solo las tarjetas, tres por fila,
+     sin partirse entre dos hojas.
+     ===================================================================== */
+  .lote { max-width: 980px; }
+  .lote__cab { display: flex; flex-wrap: wrap; gap: var(--sp-3); align-items: flex-end; justify-content: space-between; }
+  .hoja { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--sp-3); margin-top: var(--sp-5); }
+  .corte { border: 2px dashed #999; border-radius: 10px; padding: 12px; text-align: center; background: #fff;
+    color: #111; break-inside: avoid; page-break-inside: avoid; }
+  .corte__negocio { font-weight: 800; font-size: .95rem; margin: 0; }
+  .corte__tipo { font-size: .62rem; letter-spacing: .16em; text-transform: uppercase; margin: 2px 0 8px; color: #555; }
+  .corte__que { font-weight: 800; font-size: 1rem; line-height: 1.2; margin: 0 0 6px; overflow-wrap: anywhere; }
+  .corte__qr { width: 120px; margin: 0 auto; }
+  .corte__qr svg { display: block; width: 100%; height: auto; }
+  .corte__codigo { font-size: .7rem; letter-spacing: .12em; font-weight: 700; margin: 4px 0 0; }
+  .corte__pie { font-size: .66rem; color: #555; margin: 4px 0 0; }
+  .corte--usado { opacity: .35; }
+
+  @media print {
+    @page { size: A4; margin: 10mm; }
+    body { background: #fff !important; }
+    header.header, footer.footer, .no-imprimir, .alert { display: none !important; }
+    main.section { padding: 0 !important; }
+    .lote { max-width: none; }
+    .hoja { grid-template-columns: repeat(3, 1fr); gap: 6mm; margin: 0; }
+  }
+</style>
+{% endblock %}
+
+{% block contenido %}
+<main class="section"><div class="container lote">
+  <div class="lote__cab no-imprimir">
+    <div>
+      <div class="auth__eyebrow">Vales de regalo</div>
+      <h1 style="margin:6px 0 0">{{ lote.nombre }}</h1>
+      <p style="color:var(--text-muted);margin:var(--sp-2) 0 0">
+        {{ vales | length }} vales · {{ canjeados }} canjeado{{ 's' if canjeados != 1 }}.
+        Cada QR se canjea una sola vez.
+      </p>
+    </div>
+    <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap">
+      <button class="btn btn--primary" type="button" onclick="window.print()">Imprimir</button>
+      <a class="btn btn--outline" href="{{ url_for('admin_vales') }}">Volver a vales</a>
+    </div>
+  </div>
+
+  <div class="hoja">
+    {% for v in vales %}
+    <div class="corte{{ ' corte--usado' if v.estado != 'vigente' }}">
+      <p class="corte__negocio">{{ negocio.nombre }}</p>
+      <p class="corte__tipo">Vale de regalo</p>
+      <p class="corte__que">{{ v.valido_por }}</p>
+      {% if v.qr %}<div class="corte__qr">{{ v.qr | safe }}</div>{% endif %}
+      <p class="corte__codigo">{{ v.codigo }}</p>
+      <p class="corte__pie">{% if v.vence_txt %}Válido hasta el {{ v.vence_txt }}{% else %}{{ lote.nombre }}{% endif %}{% if v.estado != 'vigente' %} · {{ v.estado }}{% endif %}</p>
+    </div>
+    {% endfor %}
+  </div>
+</div></main>
+{% endblock %}

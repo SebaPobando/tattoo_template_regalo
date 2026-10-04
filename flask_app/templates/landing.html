@@ -1,0 +1,1637 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+{% include '_pwa.html' %}
+<title>{{ negocio.nombre }} · Insumos de tatuaje en {{ negocio.ciudad }}</title>
+  <meta name="description" content="Insumos de tatuaje en {{ negocio.ciudad }}, {{ negocio.pais }}: cartuchos, tintas, máquinas y bioseguridad. Revisa el stock, pide online y retira en tienda." />
+<meta name="robots" content="index, follow" />
+<link rel="canonical" href="{{ negocio.dominio }}/" />
+
+<!-- Open Graph / redes sociales -->
+<meta property="og:type" content="website" />
+<meta property="og:locale" content="es_CL" />
+<meta property="og:site_name" content="{{ negocio.nombre }}" />
+<meta property="og:title" content="{{ negocio.nombre }} · Insumos de tatuaje en {{ negocio.ciudad }}" />
+  <meta property="og:description" content="Catálogo de insumos de tatuaje de {{ negocio.nombre }}: revisa el stock, pide online y retira en tienda." />
+<meta property="og:url" content="{{ negocio.dominio }}/" />
+<!-- La imagen de la vista previa se arma con url_for y no escrita a mano
+     (auditoría 2026-09-16): apuntaba a /assets/images/og-cover.jpg, que era la
+     ruta del sitio en GitHub Pages. Sirviendo desde Flask esa ruta da 404, así
+     que WhatsApp, Instagram y Facebook mostraban el enlace sin imagen. Con
+     _external=True sale la dirección absoluta que piden las redes, la del
+     dominio donde de verdad está corriendo el sitio. -->
+<meta property="og:image" content="{{ url_for('static', filename=negocio.imagen_compartir, _external=True) }}" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="{{ negocio.nombre }} · Insumos de tatuaje en {{ negocio.ciudad }}" />
+  <meta name="twitter:description" content="Catálogo de insumos de tatuaje de {{ negocio.nombre }}: revisa el stock, pide online y retira en tienda." />
+<meta name="twitter:image" content="{{ url_for('static', filename=negocio.imagen_compartir, _external=True) }}" />
+
+<!-- Datos estructurados (SEO + AEO): negocio local -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Store",
+  "@id": "{{ negocio.dominio }}/#negocio",
+  "name": "{{ negocio.nombre }}",
+  "image": "{{ url_for('static', filename=negocio.imagen_compartir, _external=True) }}",
+  "url": "{{ negocio.dominio }}/",
+  "telephone": "+{{ negocio.whatsapp }}",
+  "priceRange": "$$",
+  "description": {{ negocio.descripcion | tojson }},
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": {{ negocio.direccion | tojson }},
+    "addressLocality": {{ negocio.ciudad | tojson }},
+    "addressRegion": {{ negocio.region | tojson }},
+    "addressCountry": "CL"
+  },
+  {% if negocio.google.nota and negocio.google.resenas %}
+  "aggregateRating": {
+    "@type": "AggregateRating",
+    "ratingValue": {{ negocio.google.nota | replace(',', '.') | tojson }},
+    "reviewCount": {{ negocio.google.resenas | tojson }}
+  },
+  {% endif %}
+  "sameAs": {{ [negocio.instagram_url, negocio.facebook_url] | select | list | tojson }}
+}
+</script>
+
+<!-- Datos estructurados (AEO): información útil del local -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": {{ ("¿Dónde queda " ~ negocio.nombre ~ "?") | tojson }},
+      "acceptedAnswer": { "@type": "Answer", "text": {{ ("En " ~ negocio.direccion ~ ", " ~ negocio.ciudad ~ ", " ~ negocio.region ~ ", " ~ negocio.pais ~ ". Horario: " ~ (negocio.horario | join(" · ")) ~ ".") | tojson }} }
+    }
+  ]
+}
+</script>
+
+<!-- Datos estructurados (AEO): autoria del sitio -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "@id": "{{ negocio.dominio }}/#sitio",
+  "name": "{{ negocio.nombre }}",
+  "url": "{{ negocio.dominio }}/",
+  "inLanguage": "es-CL",
+  "about": { "@id": "{{ negocio.dominio }}/#negocio" },
+  "publisher": { "@id": "{{ negocio.dominio }}/#negocio" },
+  "creator": {
+    "@type": "Person",
+    "@id": "{{ negocio.dominio }}/#desarrollador",
+    "name": "{{ negocio.credito.texto }}",
+    "url": "{{ negocio.credito.url }}",
+    "sameAs": ["{{ negocio.credito.url }}"],
+    "jobTitle": "Desarrollador de software",
+    "description": "Desarrollador de software en {{ negocio.credito.ciudad }}, {{ negocio.credito.pais }}. Programo el sitio de {{ negocio.nombre }}.",
+    "knowsAbout": ["Desarrollo de software", "Desarrollo web", "Frontend", "Backend", "HTML", "CSS", "JavaScript", "Accesibilidad web"],
+    "workLocation": {
+      "@type": "Place",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "{{ negocio.credito.ciudad }}",
+        "addressRegion": "Los Lagos",
+        "addressCountry": "CL"
+      }
+    }
+  }
+}
+</script>
+
+<!-- Design System: tokens, fuentes (Anton + Montserrat) y resets base -->
+<link rel="icon" type="image/jpeg" href="{{ url_for('static', filename=negocio.logo) }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+{% include '_marca.html' %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/account.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/carrito.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tienda-rapida.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/destacados.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/agenda.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/muro.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/cuenta-nav.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/promo.css') }}" />
+<script src="{{ url_for('static', filename='js/account.js') }}"></script>
+
+<style>
+  /* =======================================================================
+     index.html — estilos de página (BEM) construidos sobre los tokens del
+     Design System. Pensado para migrarse luego a componentes React/Vue.
+     ======================================================================= */
+
+  /* --- Layout helpers ---------------------------------------------------- */
+  .container {
+    max-width: var(--container);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+  .section { padding-block: var(--sp-8); }
+  .section__eyebrow {
+    font-weight: var(--fw-semibold);
+    font-size: var(--fs-caption);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  /* ---------------------- Puente a {{ negocio.segunda.nombre }} ----------------------
+     Bloque oscuro dentro de una página crema: contrasta a propósito, para
+     que se lea como "otra marca" y no como una sección más de la cafetería. */
+  .marca2-puente {
+    margin-top: var(--sp-7);
+    display: flex; align-items: center; gap: var(--sp-5); flex-wrap: wrap;
+    background: #0A0908; border-radius: var(--r-md);
+    padding: var(--sp-5) var(--sp-6);
+    border: 1px solid rgba(232, 200, 138, .22);
+    background-image: radial-gradient(ellipse 60% 120% at 12% 50%, rgba(196,30,36,.28), transparent 62%);
+  }
+  .marca2-puente__logo { width: 74px; height: auto; border-radius: 8px; flex: none; }
+  .marca2-puente__texto { flex: 1 1 260px; }
+  .marca2-puente__eyebrow {
+    margin: 0; color: #E8C88A; font-size: .64rem; font-weight: 700;
+    letter-spacing: .28em; text-transform: uppercase;
+  }
+  .marca2-puente__titulo {
+    margin: 6px 0 4px; color: #fff; font-size: 1.16rem; font-weight: 700;
+    letter-spacing: .01em;
+  }
+  .marca2-puente__bajada { margin: 0; color: #9A9086; font-size: .88rem; }
+  .marca2-puente__btn {
+    flex: none; background: #C41E24; color: #fff; text-decoration: none;
+    font-weight: 700; font-size: .9rem; padding: 13px 24px; border-radius: 999px;
+    white-space: nowrap;
+  }
+  .marca2-puente__btn:hover { background: #E03A32; }
+  @media (max-width: 640px) {
+    .marca2-puente { padding: var(--sp-5); gap: var(--sp-4); }
+    .marca2-puente__btn { width: 100%; text-align: center; }
+  }
+
+  .section__title { margin-block: var(--sp-2) var(--sp-5); }
+
+  /* --- Botón (BEM block reutilizable) ------------------------------------ */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-2);
+    font-family: var(--font-body);
+    font-weight: var(--fw-semibold);
+    font-size: 0.9375rem;
+    line-height: 1;
+    letter-spacing: 0.01em;
+    padding: 14px 26px;
+    border-radius: var(--r-pill);
+    border: var(--bw-strong) solid transparent;
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform var(--dur-fast) var(--ease),
+                filter var(--dur-fast) var(--ease),
+                background var(--dur) var(--ease);
+  }
+  .btn:hover { filter: brightness(1.06); }
+  .btn:active { transform: scale(0.97); }
+  .btn--primary { background: var(--lp-forest); color: var(--lp-cream-50); border-color: var(--lp-forest); }
+  .btn--dark    { background: var(--lp-espresso); color: var(--lp-cream-50); border-color: var(--lp-espresso); }
+  .btn--gold    { background: var(--lp-gold); color: #FFFFFF; border-color: var(--lp-gold); }
+  /* En el hero (fondo oscuro) el botón principal va claro: negro sobre negro no se ve. */
+  .hero .btn--primary { background: #FFFFFF; color: var(--lp-espresso); border-color: #FFFFFF; }
+  .hero .btn--primary:hover { background: var(--lp-cream-200); border-color: var(--lp-cream-200); }
+  .btn--outline { background: transparent; color: var(--lp-espresso); border-color: var(--border-strong); }
+  .btn--lg      { padding: 17px 32px; font-size: 1.0625rem; }
+  .btn--sm      { padding: 10px 18px; font-size: 0.8125rem; }
+  .btn--block   { display: flex; width: 100%; }
+
+  /* --- Header / navegación ----------------------------------------------- */
+  /* Anula el padding-top de account.css: aquí el header es sticky, no fixed, así que no necesita ese espacio de compensación. */
+  body { padding-top: 0; }
+  html { scroll-behavior: smooth; scroll-padding-top: 84px; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  /* Nota: el blur va en ::before (no en .header) para que .header no cree un
+     "containing block" de position:fixed y así el menú móvil (nav) se
+     posicione respecto al viewport y no quede recortado/transparente. */
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    border-bottom: var(--bw) solid var(--border);
+  }
+  .header::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: rgba(252, 248, 241, 0.86);
+    backdrop-filter: blur(10px);
+  }
+  .header__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-4);
+    height: 68px;
+  }
+  .header__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    text-decoration: none;
+  }
+  .header__brand-name {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    color: var(--lp-espresso);
+    line-height: 1;
+  }
+  .header__brand-tag {
+    font-family: var(--font-body);
+    font-weight: var(--fw-semibold);
+    font-size: 0.6rem;
+    letter-spacing: 0.36em;
+    color: var(--lp-forest);
+  }
+  .nav { display: flex; align-items: center; gap: var(--sp-2); }
+  .nav__link {
+    font-family: var(--font-body);
+    font-weight: var(--fw-semibold);
+    font-size: 0.875rem;
+    color: var(--lp-coffee-500);
+    text-decoration: none;
+    padding: 8px 14px;
+    border-radius: var(--r-pill);
+    transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+  }
+  .nav__link:hover { background: var(--surface-sand); color: var(--lp-espresso); }
+  .nav__points {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--lp-gold-bg);
+    color: #9B0D23;
+    font-weight: var(--fw-bold);
+    font-size: 0.8rem;
+    padding: 7px 13px;
+    border-radius: var(--r-pill);
+    text-decoration: none;
+  }
+  .header__toggle span { transition: transform var(--dur) var(--ease), opacity var(--dur) var(--ease); }
+
+  /* Token estrella (★) reutilizable */
+  .star-token {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: var(--lp-gold);
+    color: var(--lp-espresso);
+    font-size: 9px;
+    font-weight: 900;
+  }
+
+  /* --- Hero -------------------------------------------------------------- */
+  .hero {
+    position: relative;
+    color: var(--lp-cream-50);
+    background:
+      linear-gradient(150deg, rgba(22, 22, 22,0.30), rgba(22, 22, 22,0.78)),
+      linear-gradient(150deg, var(--lp-coffee-500), var(--lp-espresso));
+    background-size: cover;
+    background-position: center;
+  }
+  .hero__inner {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-5);
+    padding-block: var(--sp-9);
+    max-width: 640px;
+  }
+  .hero__eyebrow {
+    font-weight: var(--fw-semibold);
+    font-size: var(--fs-caption);
+    letter-spacing: var(--ls-eyebrow);
+    text-transform: uppercase;
+    color: var(--lp-gold-soft);
+  }
+  .hero__title {
+    color: var(--lp-cream-50);
+    font-size: var(--fs-display);
+    line-height: var(--lh-display);
+    margin: 0;
+  }
+  .hero__text {
+    font-size: var(--fs-lead);
+    color: rgba(252, 248, 241, 0.86);
+    margin: 0;
+    max-width: 46ch;
+  }
+  .hero__actions { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
+  .hero__banner {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-3);
+    background: rgba(252, 248, 241, 0.12);
+    border: var(--bw) solid rgba(252, 248, 241, 0.22);
+    border-radius: var(--r-pill);
+    padding: 10px 18px 10px 12px;
+    backdrop-filter: blur(6px);
+    align-self: flex-start;
+  }
+  .hero__banner-star {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--lp-gold);
+    color: var(--lp-espresso);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; font-weight: 900;
+  }
+  .hero__banner-text { font-size: 0.85rem; color: var(--lp-cream-50); }
+  .hero__banner-text strong { display: block; font-weight: var(--fw-bold); }
+
+  /* --- Nosotros ---------------------------------------------------------- */
+  .about__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--sp-6);
+    align-items: center;
+  }
+  .about__media {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    border-radius: var(--r-xl);
+  }
+  .about__media-actions {
+    margin-top: var(--sp-4);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+  }
+  .about__lead { font-size: var(--fs-lead); color: var(--text-strong); }
+
+  /* --- Premios -------------------------------------------------------- */
+  .about__stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--sp-3);
+    margin-top: var(--sp-5);
+  }
+  .stat {
+    background: var(--surface-sand);
+    border-radius: var(--r-md);
+    padding: var(--sp-4);
+  }
+  .stat__num { font-family: var(--font-display); font-size: 1.8rem; color: var(--lp-forest); line-height: 1; }
+  .stat__num2 { font-family: var(--font-display); font-size: 0.78rem; color: var(--lp-forest); line-height: 1; margin-top:20px; }
+  .stat__label { font-size: 0.78rem; color: var(--text-muted); margin-top: 6px; }
+
+  /* --- Carta ------------------------------------------------------------- */
+  .carta { background: var(--surface-raised); }
+  .carta__tabs {
+    display: flex;
+    gap: var(--sp-2);
+    overflow-x: auto;
+    padding-block: var(--sp-2);
+    margin-bottom: var(--sp-5);
+    scrollbar-width: none;
+  }
+  .carta__tabs::-webkit-scrollbar { display: none; }
+
+  /* --- Botón a la carta de {{ negocio.segunda.nombre }}, junto a las categorías ---
+     Va en negro y rojo, no en la paleta de la cafetería: es otra marca y
+     conviene que se lea así, no como una categoría más de la carta. */
+  /* La fila NO envuelve: si envolviera, el bloque de pestañas se lleva el
+     ancho completo y el botón cae solo a una tercera línea. Nowrap lo deja
+     anclado a la derecha, y son las pestañas las que se acomodan por dentro. */
+  .carta__tabs-fila {
+    display: flex; align-items: flex-start; gap: var(--sp-3);
+    margin-bottom: var(--sp-5); flex-wrap: nowrap;
+  }
+  .carta__tabs-fila .carta__tabs { flex: 1 1 auto; min-width: 0; margin-bottom: 0; }
+  /* Con espacio de sobra las pestañas se acomodan en dos filas en vez de
+     desplazarse: el botón de {{ negocio.segunda.nombre }} ocupa ~190px y, con la tira que se
+     desplaza, empujaba Pastelería y Bollería fuera de la vista sin ninguna
+     señal de que siguieran ahí. En el teléfono se mantiene el desplazamiento,
+     que es lo natural con el dedo. */
+  @media (min-width: 721px) {
+    .carta__tabs-fila .carta__tabs { flex-wrap: wrap; overflow-x: visible; }
+  }
+  .tab-marca2 {
+    flex: none;
+    display: inline-flex; align-items: center; gap: 9px;
+    font-family: var(--font-body); font-weight: var(--fw-bold); font-size: 0.85rem;
+    padding: 8px 16px 8px 8px; border-radius: var(--r-pill);
+    background: #0A0908; color: #F3E7D0; text-decoration: none;
+    border: 1px solid rgba(232, 200, 138, .3);
+    white-space: nowrap;
+    transition: background var(--dur) var(--ease);
+  }
+  .tab-marca2 img { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; }
+  .tab-marca2:hover { background: #C41E24; border-color: #C41E24; }
+  @media (max-width: 720px) {
+    /* En un teléfono no caben las dos cosas en la misma fila. */
+    .carta__tabs-fila { flex-direction: column; align-items: stretch; }
+    .tab-marca2 { justify-content: center; }
+  }
+  .carta__tab {
+    flex-shrink: 0;
+    font-family: var(--font-body);
+    font-weight: var(--fw-semibold);
+    font-size: 0.875rem;
+    padding: 9px 18px;
+    border-radius: var(--r-pill);
+    border: var(--bw-strong) solid var(--border-strong);
+    background: transparent;
+    color: var(--lp-coffee-600);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all var(--dur) var(--ease);
+  }
+  .carta__tab--active {
+    background: var(--lp-forest);
+    color: var(--lp-cream-50);
+    border-color: var(--lp-forest);
+  }
+  .carta__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: var(--sp-5);
+  }
+  .carta__estado {
+    padding: var(--sp-6) var(--sp-5);
+    background: var(--surface-card);
+    border: var(--bw) dashed var(--border-strong);
+    border-radius: var(--r-md);
+    color: var(--text-muted);
+  }
+  .carta__estado[hidden], .carta__grid[hidden], .carta__tabs[hidden] { display: none; }
+  .carta__estado-titulo { margin: 0 0 var(--sp-2); color: var(--text-strong); font-weight: var(--fw-bold); }
+  .carta__estado-texto { margin: 0; }
+  .menu-item {
+    display: flex;
+    flex-direction: column;
+    background: var(--surface-card);
+    border: var(--bw) solid var(--border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-xs);
+    overflow: hidden;
+  }
+  .menu-item__body { min-width: 0; padding: var(--sp-4) var(--sp-5) var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-2); flex: 1; }
+  .menu-item__head { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; }
+  .menu-item__name {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    color: var(--text-strong);
+    line-height: 1.05;
+    margin: 0;
+  }
+  .menu-item__tag {
+    font-family: var(--font-body);
+    font-weight: var(--fw-semibold);
+    font-size: 0.625rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: var(--r-pill);
+    background: var(--lp-gold-bg);
+    color: #9B0D23;
+  }
+  /* Agotado: se muestra igual, apagado, para que se sepa que existe y vuelve. */
+  .menu-item--agotado { opacity: .62; }
+  .menu-item__tag--agotado { background: var(--surface-sand); color: var(--text-muted); }
+  .menu-item__desc {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+  }
+  /* La invitación a pedir para retirar, bajo la carta. */
+  .retiro {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+    gap: var(--sp-3) var(--sp-5); margin-top: var(--sp-6);
+    padding: var(--sp-4) var(--sp-5); border-radius: var(--r-md);
+    background: var(--surface-card); border: var(--bw) solid var(--border);
+  }
+  .retiro__txt { margin: 0; max-width: 46ch; color: var(--text-body); font-size: .92rem; line-height: 1.5; }
+  .retiro__txt b { color: var(--lp-espresso); }
+
+  /* El precio público se muestra en CLP hasta habilitar {{ negocio.puntos.nombre }}. */
+  .price {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    flex-shrink: 0;
+    text-align: left;
+    margin-top: auto;
+    padding-top: var(--sp-2);
+  }
+  .price__clp {
+    font-family: var(--font-body);
+    font-weight: var(--fw-bold);
+    font-size: 1.15rem;
+    color: var(--text-strong);
+    white-space: nowrap;
+  }
+  .price__points {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--font-body);
+    font-weight: var(--fw-bold);
+    font-size: 0.75rem;
+    color: #9B0D23;
+    background: var(--lp-gold-bg);
+    padding: 3px 9px;
+    border-radius: var(--r-pill);
+    white-space: nowrap;
+  }
+
+  /* --- Tienda ------------------------------------------------------------ */
+  .card-size { display: flex; gap: 6px; margin: 0 0 var(--sp-3); }
+  .card-size input { position: absolute; opacity: 0; pointer-events: none; }
+  .card-size label { padding: 4px 12px; border-radius: var(--r-pill); border: 1.5px solid var(--border-strong);
+    background: var(--surface-card); font-size: 0.78rem; font-weight: var(--fw-semibold); color: var(--text-body);
+    cursor: pointer; transition: all var(--dur-fast) var(--ease-out); }
+  .card-size label:hover { border-color: var(--accent); }
+  .card-size input:checked + label { background: var(--accent); border-color: var(--accent); color: var(--text-on-dark); }
+  .shop__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: var(--sp-5);
+  }
+  a.product { text-decoration: none; color: inherit; }
+  .product {
+    display: flex;
+    flex-direction: column;
+    background: var(--surface-card);
+    border: var(--bw) solid var(--border);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out);
+  }
+  .product:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+  .product__media {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 4 / 3;
+    padding: var(--sp-3);
+    overflow: hidden;
+    background: var(--surface-sand);
+    border-bottom: var(--bw) solid var(--border);
+  }
+  .product__image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  .product__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-3);
+    padding: var(--sp-5);
+    flex: 1;
+  }
+  .product__name { font-family: var(--font-display); font-size: 1.35rem; color: var(--text-strong); margin: 0; line-height: 1.05; }
+  .product__desc { font-size: 0.82rem; color: var(--text-muted); margin: 0; }
+  .product__foot { margin-top: auto; display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; }
+  .price--inline { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: var(--sp-2) var(--sp-3); min-width: 0; }
+
+  /* --- Fidelización ------------------------------------------------------ */
+  .loyalty { background: var(--surface-raised); }
+  .loyalty__rule {
+    background: var(--lp-forest);
+    color: var(--lp-cream-50);
+    border-radius: var(--r-xl);
+    padding: var(--sp-7) var(--sp-6);
+    text-align: center;
+    margin-bottom: var(--sp-6);
+  }
+  .loyalty__rule-eyebrow { color: var(--lp-gold-soft); }
+  .loyalty__rule-big {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 6vw, 3.2rem);
+    color: var(--lp-cream-50);
+    margin: var(--sp-2) 0;
+  }
+  .loyalty__rule-text { color: rgba(252, 248, 241, 0.82); max-width: 46ch; margin-inline: auto; }
+  .loyalty__steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--sp-4);
+  }
+  .step {
+    background: var(--surface-card);
+    border: var(--bw) solid var(--border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-sm);
+    padding: var(--sp-5);
+  }
+  .step__num {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: var(--lp-gold-bg);
+    color: #9B0D23;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    margin-bottom: var(--sp-3);
+  }
+  .step__title { font-family: var(--font-display); font-size: 1.4rem; margin: 0 0 6px; }
+  .step__text { font-size: 0.875rem; color: var(--text-muted); margin: 0; }
+
+  .loyalty__buy {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--sp-6);
+    margin-top: var(--sp-7);
+  }
+  .points-packs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--sp-3);
+  }
+  .points-pack {
+    position: relative;
+    background: var(--surface-card);
+    border: var(--bw) solid var(--border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-sm);
+    padding: var(--sp-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-3);
+    text-align: center;
+  }
+  .points-pack--popular { border-color: var(--lp-gold); }
+  .points-pack__badge {
+    position: absolute;
+    top: -11px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--lp-gold);
+    color: var(--lp-espresso);
+    font-family: var(--font-body);
+    font-weight: var(--fw-bold);
+    font-size: 0.65rem;
+    letter-spacing: 0.04em;
+    padding: 3px 10px;
+    border-radius: var(--r-pill);
+    white-space: nowrap;
+  }
+  .points-pack__pts { font-family: var(--font-display); font-size: 1.15rem; color: var(--text-strong); }
+  .points-pack__price { font-family: var(--font-body); font-weight: var(--fw-semibold); font-size: 0.9rem; color: var(--text-muted); }
+
+  /* --- Footer ------------------------------------------------------------ */
+  .footer { background: var(--lp-espresso); color: var(--text-on-dark); margin-top: var(--sp-9); }
+  .footer__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--sp-6);
+    padding-block: var(--sp-8) var(--sp-6);
+  }
+  .footer__brand-name { font-family: var(--font-display); font-size: 1.6rem; line-height: 0.95; }
+  .footer__text { color: var(--text-on-dark-mut); font-size: 0.85rem; margin-top: var(--sp-3); max-width: 28ch; }
+  .footer__title {
+    color: var(--lp-gold-soft);
+    font-size: 0.7rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    margin-bottom: var(--sp-3);
+  }
+  .footer__list { list-style: none; padding: 0; margin: 0; }
+  .footer__list li { margin-bottom: var(--sp-2); }
+  .footer__link { color: var(--text-on-dark-mut); font-size: 0.875rem; text-decoration: none; }
+  .footer__link:hover { color: var(--lp-cream-50); }
+  .footer__social { display: flex; gap: var(--sp-2); margin-top: var(--sp-2); }
+  .footer__social a {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    border: var(--bw) solid rgba(255,255,255,0.18);
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--lp-cream-50);
+    font-family: var(--font-body);
+    font-weight: var(--fw-bold);
+    font-size: 0.8rem;
+    text-decoration: none;
+    transition: background var(--dur) var(--ease);
+  }
+  .footer__social a:hover { background: rgba(255,255,255,0.12); }
+  .footer__dev { display: inline-block; margin-top: 6px; font-size: 0.78rem; }
+  .footer__dev strong { color: var(--text-on-dark); font-weight: var(--fw-semibold); }
+  .footer__dev a { color: var(--text-on-dark); text-decoration: underline; text-underline-offset: 2px; }
+  .footer__dev a:hover { color: var(--lp-gold-soft); }
+  .footer__bottom {
+    border-top: var(--bw) solid rgba(255,255,255,0.1);
+    padding: var(--sp-4) var(--gutter);
+    text-align: center;
+    color: var(--text-on-dark-mut);
+    font-size: 0.75rem;
+  }
+
+  /* --- Ilustraciones decorativas de la marca ------------------------------- */
+  .mascot { position: absolute; pointer-events: none; filter: drop-shadow(0 8px 16px rgba(22, 22, 22,0.25)); z-index: 2; width: 100px; height: auto; object-fit: contain; }
+  /* Las mascotas van rotadas y absolutas: al girar, la esquina del rectángulo
+     se sale del contenedor y aparecía una barra de scroll horizontal de 2 px
+     en toda la página. Se recorta en la sección, no en <body>: recortar el
+     body rompería el `position: sticky` del header. */
+  .section, .carta, .hero { overflow-x: clip; }
+  .mascot--hero { right: clamp(12px, 4vw, 48px); bottom: -14px; z-index: 3; width: clamp(72px, 12vw, 110px); }
+  .mascot--about { top: -20px; right: -14px; z-index: 3; width: clamp(58px, 10vw, 78px); }
+  .mascot--carta { top: -22px; right: -8px; left: auto; transform: rotate(8deg); width: clamp(48px, 8vw, 60px); }
+  .mascot--puntos { right: 12px; bottom: -14px; width: clamp(60px, 10vw, 80px); }
+  .mascot--tienda { top: -12px; right: 4px; transform: rotate(9deg); width: clamp(48px, 8vw, 60px); }
+  .mascot--talleres { top: -14px; right: 6px; transform: rotate(-7deg); width: clamp(48px, 8vw, 62px); }
+  .mascot--mural { top: -24px; left: 6px; transform: rotate(-6deg); width: clamp(48px, 8vw, 64px); }
+  .mascot--registro { top: -26px; right: 8px; transform: rotate(7deg); width: clamp(48px, 8vw, 60px); }
+
+  /* --- Intro: gotas de tinta cayendo (una vez, al cargar) --------------- */
+  .beans-intro { position: fixed; inset: 0; pointer-events: none; z-index: 200; overflow: hidden; }
+  .bean { position: absolute; top: -5vh; width: 12px; height: 16px; background: radial-gradient(circle at 35% 65%, #4a4a4a, #050505 70%); border-radius: 50% 50% 50% 50% / 35% 35% 65% 65%; opacity: 0; animation-name: beanFall; animation-timing-function: cubic-bezier(.55,.05,.65,.95); animation-fill-mode: forwards; will-change: transform, opacity; }
+  .bean:nth-child(3n) { background: radial-gradient(circle at 35% 65%, #e8505f, var(--points) 70%); }
+  .bean::after { content: ""; position: absolute; left: 28%; top: 45%; width: 3px; height: 4px; border-radius: 50%; background: rgba(255,255,255,.45); }
+  @keyframes beanFall { 0% { opacity: 0; transform: translateY(0) rotate(0deg); } 8% { opacity: .95; } 88% { opacity: .95; } 100% { opacity: 0; transform: translateY(112vh) rotate(360deg); } }
+  @keyframes beanFallRev { 0% { opacity: 0; transform: translateY(0) rotate(0deg); } 8% { opacity: .95; } 88% { opacity: .95; } 100% { opacity: 0; transform: translateY(112vh) rotate(-360deg); } }
+  @media (prefers-reduced-motion: reduce) { .beans-intro { display: none; } }
+
+  .header__brand-logo { height: clamp(32px, 5vw, 44px); width: auto; object-fit: contain; border-radius: var(--radius-sm); }
+  .footer__logo { height: 76px; width: auto; object-fit: contain; margin-bottom: var(--sp-2); border-radius: var(--radius-sm); cursor: pointer; }
+
+  /* --- Hero: foto de fondo real ------------------------------------------- */
+  .hero__media { position: absolute; inset: 0; z-index: 0; }
+  .hero__scrim { position: absolute; inset: 0; z-index: 1; background: linear-gradient(150deg, rgba(22, 22, 22,0.35), rgba(22, 22, 22,0.82)); }
+  .hero__inner { position: relative; z-index: 2; }
+  .hero__btn--ghost { color: var(--lp-cream-50); border-color: rgba(252,248,241,0.45); }
+
+  /* --- Ícono del filtro "Café" (logo) -------------------------------------- */
+  .carta__tab { display: inline-flex; align-items: center; gap: 6px; }
+  .carta__tab-icon { width: 18px; height: 18px; border-radius: 50%; overflow: hidden; flex-shrink: 0; }
+  .carta__heading { position: relative; display: inline-block; padding-right: clamp(56px, 9vw, 72px); }
+
+  /* --- Ubicación: mapa compacto -------------------------------------------- */
+  .map-compact { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; background: var(--surface-card); border: var(--bw) solid var(--border); border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--shadow-sm); }
+  .map-compact__info { padding: var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-3); justify-content: center; }
+  .map-compact__title { font-family: var(--font-display); font-size: 1.4rem; margin: 0; color: var(--text-strong); }
+  .map-compact__meta { display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem; color: var(--text-muted); }
+  .map-compact__rating { color: var(--lp-gold); font-weight: var(--fw-bold); }
+  .map-compact__rating-count { color: var(--text-muted); font-weight: var(--fw-regular); }
+  a.map-compact__rating { text-decoration: none; align-self: flex-start; }
+  a.map-compact__rating:hover .map-compact__rating-count { text-decoration: underline; }
+  .map-compact__acciones { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+  .map-compact__resena { display: inline-flex; align-items: center; gap: 8px; }
+  .map-compact__resena svg { color: var(--lp-gold); flex: none; }
+  .map-compact__invita { margin: 0; font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; }
+  .map-compact__frame { display: block; position: relative; aspect-ratio: 16 / 9; background: var(--surface-sand); }
+  .map-compact__frame iframe { width: 100%; height: 100%; border: 0; pointer-events: none; }
+
+  /* --- Próximamente --------------------------------------------------------- */
+  .lead-form { margin-top: var(--sp-6); max-width: 480px; }
+  .lead-form__label { display: block; font-size: 0.85rem; color: var(--text-body); margin-bottom: var(--sp-2); font-weight: var(--fw-medium); }
+  .lead-form__row { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+  .lead-form__input { flex: 1; min-width: 180px; padding: 12px 16px; border-radius: var(--r-md); border: var(--bw-strong) solid var(--border-strong); font-family: var(--font-body); font-size: 0.9rem; background: var(--surface-card); }
+  .lead-form__input:focus { outline: none; border-color: var(--lp-forest); box-shadow: var(--shadow-focus); }
+  .lead-form__success { margin-top: var(--sp-3); color: var(--lp-forest); font-weight: var(--fw-semibold); font-size: 0.9rem; }
+
+  /* --- Maquetas: nota de demo ----------------------------------------------- */
+  .demo-note { display: inline-block; background: var(--surface-sand); color: var(--text-muted); font-size: 0.7rem; font-weight: var(--fw-semibold); letter-spacing: 0.05em; text-transform: uppercase; padding: 4px 10px; border-radius: var(--r-pill); margin-bottom: var(--sp-3); }
+
+  /* --- Mural de deseos ------------------------------------------------------- */
+  .mural__form { display: flex; flex-direction: column; gap: var(--sp-3); max-width: 420px; margin: var(--sp-5) 0 var(--sp-6); }
+  .mural__textarea { padding: 12px 16px; border-radius: var(--r-md); border: var(--bw-strong) solid var(--border-strong); font-family: var(--font-body); font-size: 0.9rem; resize: vertical; min-height: 80px; background: var(--surface-card); }
+  .mural__textarea:focus { outline: none; border-color: var(--lp-forest); box-shadow: var(--shadow-focus); }
+  .mural__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--sp-4); }
+  .wish { background: var(--lp-gold-bg); border-radius: var(--r-md); padding: var(--sp-4); box-shadow: var(--shadow-xs); display: flex; flex-direction: column; gap: var(--sp-2); }
+  .wish__msg { font-size: 0.9rem; color: var(--lp-espresso); margin: 0; }
+  .wish__meta { font-size: 0.75rem; color: #9B0D23; font-weight: var(--fw-semibold); }
+
+  /* --- Calendario de actividades ---------------------------------------------- */
+  .calendar__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--sp-4); }
+  .event { background: var(--surface-card); border: var(--bw) solid var(--border); border-radius: var(--r-lg); padding: var(--sp-5); box-shadow: var(--shadow-xs); display: flex; flex-direction: column; gap: var(--sp-2); }
+  .event__date { font-family: var(--font-display); font-size: 1.1rem; color: var(--lp-forest); }
+  .event__title { font-family: var(--font-body); font-weight: var(--fw-bold); font-size: 1rem; color: var(--text-strong); margin: 0; }
+  .event__text { font-size: 0.85rem; color: var(--text-muted); margin: 0; }
+  .event__form { display: none; flex-direction: column; gap: var(--sp-2); margin-top: var(--sp-2); }
+  .event__form--open { display: flex; }
+  .event__form input { padding: 10px 14px; border-radius: var(--r-sm); border: var(--bw-strong) solid var(--border-strong); font-family: var(--font-body); font-size: 0.85rem; }
+  .event__success { font-size: 0.8rem; color: var(--lp-forest); font-weight: var(--fw-semibold); margin: 0; }
+
+  /* --- Registro (maqueta) ------------------------------------------------------ */
+  .register__wrap { display: flex; justify-content: center; }
+  .register__card { max-width: 440px; width: 100%; background: var(--surface-card); border: var(--bw) solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); padding: var(--sp-6); }
+  .register__form { display: flex; flex-direction: column; gap: var(--sp-2); margin-top: var(--sp-5); }
+  .register__hint { font-size: 0.75rem; color: var(--text-muted); margin: 2px 0 var(--sp-2); }
+  .register__hint--error { color: var(--lp-danger); }
+  .register__hint--ok { color: var(--lp-forest); }
+  .register__success { margin-top: var(--sp-3); color: var(--lp-forest); font-weight: var(--fw-semibold); font-size: 0.9rem; }
+
+  /* =======================================================================
+     Responsive — Mobile First. A partir de 768px se expande el layout.
+     ======================================================================= */
+  @media (max-width: 767px) {
+    .nav__link { padding: 12px var(--sp-3); }
+    .nav__points { margin-top: var(--sp-2); justify-content: center; }
+    .mascot--hero { width: 74px; bottom: -8px; right: 10px; }
+    .mascot--puntos { width: 58px; right: 8px; bottom: -10px; }
+    .mascot--about, .mascot--carta, .mascot--tienda, .mascot--talleres, .mascot--mural, .mascot--registro { width: 46px; }
+  }
+
+  @media (min-width: 768px) {
+    .about__grid { grid-template-columns: minmax(0, 1fr) minmax(0, 0.85fr); }
+    .about__stats { grid-template-columns: repeat(4, 1fr); }
+    .carta__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--sp-7); }
+    .loyalty__buy { grid-template-columns: repeat(2, 1fr); }
+    .map-compact { grid-template-columns: 1fr 1fr; }
+    .map-compact__frame { aspect-ratio: auto; }
+  }
+
+  /* --- Volver arriba ------------------------------------------------------ */
+  .to-top {
+    position: fixed;
+    right: var(--sp-4);
+    bottom: calc(var(--sp-4) + env(safe-area-inset-bottom, 0px));
+    z-index: 60;
+    width: 48px; height: 48px;
+    display: grid; place-items: center;
+    border: 0; border-radius: 50%; cursor: pointer;
+    background: var(--accent); color: var(--text-on-dark);
+    box-shadow: 0 0 0 2px var(--lp-cream-50), var(--shadow-md);
+    opacity: 0; visibility: hidden; transform: translateY(8px);
+    transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease),
+                visibility var(--dur) var(--ease), background var(--dur-fast) var(--ease);
+  }
+  .to-top--visible { opacity: 1; visibility: visible; transform: none; }
+  .to-top:hover { background: var(--accent-hover); }
+  .to-top:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--lp-cream-50), var(--shadow-focus); }
+  .to-top__icon { width: 20px; height: 20px; }
+  @media (prefers-reduced-motion: reduce) { .to-top { transition: none; } }
+  @media (min-width: 768px) {
+    .to-top { right: var(--sp-5); bottom: var(--sp-5); width: 52px; height: 52px; }
+  }
+</style>
+{% include '_temporada.html' %}
+</head>
+<body>
+
+{# El banner de promocion va ANTES del header a proposito: aca el header es
+   `position: sticky`, asi que la promo lo empuja hacia abajo sin taparlo y se
+   va sola con el scroll. Fijo habria que calcularle la altura y sumarsela al
+   header en cada resize. Si no hay promo vigente, el include no pinta nada. #}
+{% include '_promo.html' %}
+
+<!-- ============================ HEADER ============================ -->
+<header class="header">
+  <div class="container header__inner">
+    <a class="header__brand" href="#inicio" aria-label="{{ negocio.nombre }} — Inicio">
+      <img class="header__brand-logo" id="headerLogo" src="{{ url_for('static', filename=negocio.logo) }}" alt="" />
+      <span class="header__brand-name">{{ negocio.nombre_corto }}</span>
+      <span class="header__brand-tag">{{ negocio.tag }}</span>
+    </a>
+
+    {% set inicio = '' %}
+    {% include '_nav.html' %}
+
+    {% include '_carrito-boton.html' %}
+    <button class="header__toggle" id="navToggle" aria-label="Abrir menú" aria-expanded="false" aria-controls="nav">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<main>
+<div class="beans-intro" id="beansIntro" aria-hidden="true"></div>
+  <!-- ============================ HERO ============================ -->
+  <section class="hero" id="inicio">
+    <div class="hero__media"><img src="{{ url_for('static', filename=negocio.imagen_hero) }}" alt="{{ negocio.nombre }}, {{ negocio.ciudad }}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 30%" /></div>
+    <div class="hero__scrim"></div>
+    <div class="container">
+      <div class="hero__inner">
+      <span class="hero__eyebrow">Insumos de tatuaje · {{ negocio.ciudad }}</span>
+      <h1 class="hero__title">{{ negocio.hero_titulo }}</h1>
+      <p class="hero__text">{{ negocio.hero_texto }}</p>
+      <div class="hero__actions">
+        <a class="btn btn--primary btn--lg" href="#carta">Ver catálogo</a>
+        {% if barra_activa() %}<a class="btn btn--outline btn--lg hero__btn--ghost" href="{{ url_for('pedir') }}">Pedir para retirar</a>
+        {% elif negocio.tienda_url %}<a class="btn btn--outline btn--lg hero__btn--ghost" href="#tienda">Tienda online</a>{% endif %}
+        <a class="btn btn--gold btn--lg" href="#puntos"><span class="star-token">★</span> Compra tus {{ negocio.puntos.nombre }}</a>
+      </div>
+      <div class="hero__banner">
+        <span class="hero__banner-star">★</span>
+        <span class="hero__banner-text"><strong>Programa {{ negocio.puntos.nombre }}</strong>suma con cada compra · canjea por insumos</span>
+      </div>
+      </div>
+    </div>
+    {% if negocio.mascotas %}<img class="mascot mascot--hero" src="{{ mascota('sirviendo.png', 'hero') }}" alt="" aria-hidden="true" />{% endif %}
+  </section>
+
+  <!-- ============================ NOSOTROS ============================ -->
+  <section class="section" id="nosotros">
+    <div class="container about__grid">
+      <div>
+        {# Texto de EJEMPLO: cámbialo por la historia real de la tienda.
+           Las cifras de abajo también son de ejemplo. #}
+        <span class="section__eyebrow">Quiénes somos</span>
+        <h2 class="section__title">Hecho por tatuadores, para tatuadores</h2>
+        <p class="about__lead">Sabemos lo que es quedarse sin cartuchos a mitad de semana. Por eso armamos una tienda donde encuentras lo que usas todos los días, con stock a la vista.</p>
+        <p>Trabajamos con marcas que probamos en la camilla: cartuchos con membrana, tintas con registro, máquinas confiables y todo lo de bioseguridad para que tu estación quede impecable. Si buscas algo que no tenemos, pídelo en el muro y lo traemos.</p>
+        <p>Además organizamos cursos y capacitaciones para seguir aprendiendo. Pasa a conocernos a {{ negocio.direccion }}.</p>
+        <div class="about__stats">
+          <div class="stat"><div class="stat__num">2024</div><div class="stat__num2">Año de fundación</div></div>
+          <div class="stat"><div class="stat__num">+200</div><div class="stat__num2">Productos</div></div>
+          <div class="stat"><div class="stat__num">+50</div><div class="stat__num2">Estudios clientes</div></div>
+        </div>
+      </div>
+      <div class="about__media" style="overflow:visible">
+        <div style="position:absolute;inset:0;border-radius:var(--r-xl);overflow:hidden;box-shadow:var(--shadow-lg)">
+          <img class="about__photo" src="{{ url_for('static', filename=negocio.imagen_equipo) }}" alt="Equipo de {{ negocio.nombre }}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" />
+        </div>
+        {% if negocio.mascotas %}<img class="mascot mascot--about" src="{{ mascota('mano.png', 'about') }}" alt="" aria-hidden="true" />{% endif %}
+      </div>
+      <div class="about__media-actions">
+        <a class="btn btn--gold btn--sm" href="#carta">Ver el catálogo</a>
+        <a class="btn btn--dark btn--sm" href="#talleres">Ver los cursos</a>
+        <a class="btn btn--outline btn--sm" href="#puntos">Compra tus {{ negocio.puntos.nombre }}</a>
+      </div>
+    </div>
+  </section>
+
+  {#
+    Acá puede ir una sección de «Marcas que trabajamos» o de «Premios y
+    convenciones»: logos, año y enlace. No viene en la plantilla porque son de
+    cada tienda y de nadie más.
+
+    Si tu cliente tiene reconocimientos propios, esta es su vitrina natural:
+    una <section class="section" id="premios"> con las imágenes y los enlaces
+    reales, y su enlace en el nav. Si no los tiene, la landing funciona igual
+    sin ella — que es como está ahora.
+  #}
+
+  <!-- ============================ CARTA ============================ -->
+  <section class="carta section" id="carta">
+    <div class="container">
+      <div class="carta__heading">
+        <span class="section__eyebrow">Catálogo</span>
+        <h2 class="section__title">Insumos con stock</h2>
+        {% if negocio.mascotas %}<img class="mascot mascot--carta" src="{{ mascota('tomando.png', 'carta') }}" alt="" aria-hidden="true" />{% endif %}
+      </div>
+      <p style="color: var(--text-muted); max-width: 52ch; margin-top: calc(var(--sp-5) * -1 + var(--sp-2));">Precios en pesos chilenos, IVA incluido. Lo marcado como agotado vuelve pronto: pregúntanos por WhatsApp.</p>
+
+      {# Las pestañas son una tira que se desplaza; el botón de {{ negocio.segunda.nombre }} va
+         FUERA de ella para que no se pierda al hacer scroll horizontal. #}
+      <div class="carta__tabs-fila">
+        <div class="carta__tabs" id="cartaTabs" role="tablist" aria-label="Categorías del catálogo"></div>
+        {% if negocio.segunda.activa %}
+        <a class="tab-marca2" href="{{ url_for('segunda_marca') }}">
+          <img src="{{ url_for('static', filename=negocio.segunda.logo) }}" alt="" aria-hidden="true" />
+          {{ negocio.segunda.nombre }}
+        </a>
+        {% endif %}
+      </div>
+      <div class="carta__estado" id="cartaEstado" role="status" hidden>
+        <p class="carta__estado-titulo" id="cartaEstadoTitulo"></p>
+        <p class="carta__estado-texto" id="cartaEstadoTexto"></p>
+      </div>
+      <div class="carta__grid" id="cartaGrid"></div>
+
+      {# Pedidos para retiro. Solo aparece con los pedidos ABIERTOS desde
+         el panel: un botón que lleva a «no estamos tomando pedidos» es un
+         botón a una maqueta. #}
+      {% if barra_activa() %}
+      <aside class="retiro">
+        <p class="retiro__txt"><b>¿Lo pasas a buscar?</b> Arma tu pedido desde acá, elige cuándo pasas y te lo tenemos listo. Pagas al retirar.</p>
+        <a class="btn btn--primary btn--sm" href="{{ url_for('pedir') }}">Pedir para retirar</a>
+      </aside>
+      {% endif %}
+
+      <!-- ===================== PUENTE A LA SEGUNDA MARCA =====================
+           Los colores van en línea y no en styles.css a propósito: son de
+           otra marca. Meterlos en el sistema de diseño de {{ negocio.nombre_corto }} sería
+           empezar a mezclar dos identidades que conviene tener separadas. -->
+      {% if negocio.segunda.activa %}
+      <aside class="marca2-puente">
+        <img class="marca2-puente__logo"
+             src="{{ url_for('static', filename=negocio.segunda.logo) }}"
+             alt="" aria-hidden="true" />
+        <div class="marca2-puente__texto">
+          <p class="marca2-puente__eyebrow">En el mismo lugar</p>
+          <p class="marca2-puente__titulo">{{ negocio.segunda.nombre }}</p>
+          <p class="marca2-puente__bajada">
+            {{ negocio.segunda.descripcion }}
+          </p>
+        </div>
+        <a class="marca2-puente__btn" href="{{ url_for('segunda_marca') }}">
+          Conocer {{ negocio.segunda.nombre }}
+        </a>
+      </aside>
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- ============================ TIENDA ============================ -->
+  {#
+    La tienda online es OPCIONAL: solo aparece si la tienda vende con Shopify
+    (SHOPIFY_DOMINIO en el .env). Sin Shopify, el catálogo de arriba y los
+    pedidos para retirar hacen ese trabajo, y esta sección no se pinta: un
+    botón de «comprar» que no lleva a ninguna parte es peor que nada.
+  #}
+  {% if negocio.tienda_url %}
+  <section class="section" id="tienda" style="position: relative;">
+    <div class="container">
+      <span class="section__eyebrow">Tienda online</span>
+      <h2 class="section__title">Compra online y te lo enviamos</h2>
+      {% if negocio.mascotas %}<img class="mascot mascot--tienda" src="{{ mascota('mano.png', 'tienda') }}" alt="" aria-hidden="true" />{% endif %}
+
+      {#
+        Las tarjetas salen del catálogo de Shopify (config/shopify.py). Precio
+        y stock incluidos: acá NO se escribe ningún precio a mano. Antes sí, y
+        eso significaba que el mismo número vivía en este archivo, en
+        tienda-productos.js y en Shopify — tres copias que se separaban a la
+        primera vez que alguien subía un precio y olvidaba el código.
+
+        Si Shopify no contesta, `tienda` viene None y se pintan las tarjetas
+        del bloque de abajo, que son una foto del catálogo escrita a mano.
+      #}
+      {#
+        Pastillas de categoría. La categoría de cada producto la pone Shopify
+        (campo «Tipo de producto»); config/shopify.py la deduce cuando está en
+        blanco. El orden de las pastillas es el orden en que los productos
+        vienen en la colección, igual que las tarjetas.
+
+        Con una sola categoría no se pintan: una pestaña única no filtra nada
+        y solo agrega ruido. Tampoco se pintan en el camino del respaldo
+        (Shopify caído), donde las tarjetas están escritas a mano y no tienen
+        categoría que ofrecer.
+      #}
+      {% if tienda %}
+      {% set categorias = tienda | map(attribute='categoria') | unique | list %}
+      {# Los destacados del panel (Admin → Tienda) tienen su propia pastilla,
+         segunda, después de «Todos»: es lo que el local quiere que se vea. #}
+      {% set especiales = tienda | selectattr('destacado') | list %}
+      {% if categorias | length > 1 or especiales %}
+      <div class="shop__tabs" id="shopTabs" role="group" aria-label="Filtrar la tienda por categoría">
+        <button class="shop__tab shop__tab--active" type="button" data-cat="" aria-pressed="true">Todos</button>
+        {% if especiales %}
+        <button class="shop__tab shop__tab--especiales" type="button" data-cat="__especiales" aria-pressed="false">{{ nombre_especiales }}</button>
+        {% endif %}
+        {% for c in categorias %}
+        <button class="shop__tab" type="button" data-cat="{{ c }}" aria-pressed="false">{{ c }}</button>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% endif %}
+
+      <div class="shop__grid" id="shopGrid">
+        {% if tienda %}
+          {#
+            Las tarjetas van AGRUPADAS por categoría: primero todos los cafés,
+            después los accesorios. Mezclados se leían como un montón: dos
+            cafés, unos filtros, más café. Dentro de cada grupo manda el orden
+            de la colección de Shopify, así que reordenar ahí se sigue notando
+            acá; lo único que el sitio decide es que un grupo no se parta.
+
+            El orden de los grupos es el mismo de las pastillas —la categoría
+            del primer producto de la colección va primero—, así que se cambia
+            desde Shopify: sube un café al principio y el café encabeza.
+          #}
+          {#
+            Los DESTACADOS van primero de todo, en el orden que les puso el
+            admin, sin importar su categoría: es lo primero que se ve al
+            entrar a «Todos». Después, el resto agrupado como siempre. Como
+            las pastillas filtran escondiendo tarjetas, al entrar a una categoría el
+            destacado también queda arriba de su grupo.
+          #}
+          {% set orden_tienda = namespace(lista=(tienda | selectattr('destacado') | sort(attribute='destacado.orden') | list)) %}
+          {% for c in categorias %}
+          {% set orden_tienda.lista = orden_tienda.lista + (tienda | selectattr('categoria', 'equalto', c) | rejectattr('destacado') | list) %}
+          {% endfor %}
+          {% for p in orden_tienda.lista %}
+          <article class="product product--interactive{{ ' product--agotado' if p.agotado }}{{ (' product--destacado product--d-' ~ p.destacado.color) if p.destacado }}"
+                   data-categoria="{{ p.categoria }}"{% if p.destacado %} data-especial="1"{% endif %}>
+            {% if p.destacado %}<span class="product__cinta">{{ p.destacado.cinta }}</span>{% endif %}
+            {% if p.imagen %}
+            <div class="product__media">
+              <img class="product__image" src="{{ p.imagen }}"
+                   alt="{{ p.imagen_alt or p.name }}" loading="lazy" decoding="async" />
+            </div>
+            {% endif %}
+            <div class="product__body">
+              <h3 class="product__name">
+                <a class="product__link" href="{{ url_for('producto') }}?id={{ p.id }}">{{ p.name }}</a>
+              </h3>
+              {# La descripción de Shopify puede ser larga; en la tarjeta se
+                 corta y la ficha la muestra entera. #}
+              <p class="product__desc">{{ p.desc | truncate(95, True, '…') }}</p>
+              <div class="product__foot">
+                <div class="price price--inline">
+                  <span class="price__clp">
+                    {{ 'Desde ' if p.type != 'acc' }}${{ '{:,}'.format(p.desde_clp).replace(',', '.') }} CLP
+                  </span>
+                </div>
+                {% if p.agotado %}
+                {# Se muestra igual, marcado. Esconderlo haría creer que se
+                   dejó de vender (decisión de Seba). #}
+                <span class="product__agotado">Agotado por ahora</span>
+                {% else %}
+                <button class="btn btn--primary btn--block product__add" type="button"
+                        data-lp-rapido="{{ p.id }}">
+                  {{ 'Agregar al carrito' if p.type == 'acc' else 'Elegir y agregar' }}
+                </button>
+                {% endif %}
+              </div>
+            </div>
+          </article>
+          {% endfor %}
+        {% else %}
+        {# Shopify configurado pero sin responder: se avisa, sin inventar
+           productos. Vuelve solo cuando Shopify contesta. #}
+        <p style="grid-column:1/-1;color:var(--text-muted);margin:0">
+          La tienda online no está respondiendo en este momento. Vuelve en unos
+          minutos, o escríbenos{% if negocio.whatsapp_url %} por
+          <a href="{{ negocio.whatsapp_url }}" target="_blank" rel="noopener">WhatsApp</a>{% endif %}.
+        </p>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ============================ TALLERES ============================ -->
+  <!-- La agenda se pinta en el servidor para el primer render y el HTML que
+       ve Google; agenda.js la refresca contra /api/v1/agenda porque los
+       cupos cambian cada vez que alguien se inscribe. -->
+  <section class="section" id="talleres" style="position: relative;">
+    <div class="container">
+      <span class="section__eyebrow">Agenda</span>
+      <h2 class="section__title">Cursos y capacitaciones</h2>
+      {% if negocio.mascotas %}<img class="mascot mascot--talleres" src="{{ mascota('sirviendo.png', 'talleres') }}" alt="" aria-hidden="true" />{% endif %}
+
+      <div class="agenda agenda--landing" data-agenda {% if not agenda %}hidden{% endif %}>
+        {% for a in agenda %}
+        <a class="evento" href="{{ a.url }}">
+          {% if a.imagen %}
+          <img class="evento__afiche" src="{{ a.imagen }}" alt="Afiche de {{ a.nombre }}" loading="lazy" onerror="this.hidden=true" />
+          {% endif %}
+          <div class="evento__contenido">
+            <div class="evento__fecha">
+              <div class="evento__dia">{{ a.dia }}</div>
+              <div class="evento__mes">{{ a.mes }}</div>
+            </div>
+            <div class="evento__cuerpo">
+              <h3 class="evento__nombre">{{ a.nombre }}</h3>
+              <p class="evento__dato">{{ a.cuando }}</p>
+              {% if a.lugar %}<p class="evento__dato">{{ a.lugar }}</p>{% endif %}
+              <div class="evento__pie">
+                <span class="pastilla pastilla--precio">{{ a.precio_fmt }}</span>
+                {% if a.agotada %}
+                  <span class="pastilla pastilla--agotada">Sin cupos</span>
+                {% elif a.libres <= 3 %}
+                  <span class="pastilla pastilla--pocos">Quedan {{ a.libres }} cupo{{ 's' if a.libres != 1 }}</span>
+                {% else %}
+                  <span class="pastilla pastilla--libre">{{ a.libres }} cupos</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+
+      <div class="sin-nada" data-agenda-vacio {% if agenda %}hidden{% endif %}>
+        {% if negocio.mascotas %}<img src="{{ mascota('en-construccion.png', 'agenda') }}" alt="" aria-hidden="true" />{% endif %}
+        <p style="margin:0 0 var(--sp-2)"><b>Todavía no hay cursos publicados.</b></p>
+        <p style="margin:0;font-size:.88rem">Estamos preparando las próximas capacitaciones. Vuelve pronto.</p>
+      </div>
+
+      <p class="agenda__pie" data-agenda-pie {% if not agenda %}hidden{% endif %}>
+        <a class="btn btn--outline" href="{{ url_for('actividades') }}">Ver toda la agenda</a>
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================ MURO DE DESEOS ============================ -->
+  <!-- Mismo trato que la agenda: el servidor pinta los deseos aprobados para
+       el primer render y el HTML que ve Google, y muro.js los refresca contra
+       /api/v1/muro. Acá el refresco pesa más todavía, porque el muro está
+       moderado: un mensaje que se rechaza tiene que salir de la portada sin
+       esperar a que alguien vuelva a desplegar el sitio. -->
+  <section class="section" id="muro">
+    <div class="container">
+      <span class="section__eyebrow">Comunidad</span>
+      <h2 class="section__title">¿Qué quieres que traigamos?</h2>
+      <p style="color:var(--text-muted);max-width:56ch;margin:0 0 var(--sp-6)">
+        Pídenos una marca o un producto que no encuentras, recomienda algo que
+        te funcionó o deja un saludo a la comunidad.
+      </p>
+
+      {% with volver = 'landing' %}
+        {% include '_muro-form.html' %}
+      {% endwith %}
+
+      {#
+        El carrusel son TRES cajas anidadas y el orden importa:
+
+          [data-muro-carrusel]  la caja entera. Es la que se esconde cuando no
+                                hay nada que mostrar.
+          [data-muro]           la pista que se desplaza. muro.js le reemplaza
+                                el innerHTML al refrescar, así que acá adentro
+                                NO puede ir nada que deba sobrevivir.
+          [data-muro-controles] las flechas. Van FUERA de la pista justamente
+                                por lo anterior: dentro, el primer refresco se
+                                las llevaría.
+
+        Sin JavaScript esto sigue siendo un carrusel: se arrastra con el dedo
+        y se mueve con las flechas del teclado. Los botones son un extra.
+      #}
+      <div class="carrusel" data-muro-carrusel {% if not muro %}hidden{% endif %}>
+        <div class="carrusel__controles" data-muro-controles hidden>
+          <button class="carrusel__btn" type="button" data-muro-ir="-1"
+                  aria-label="Ver los mensajes anteriores" aria-controls="muroPista">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                 stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
+                 aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <button class="carrusel__btn" type="button" data-muro-ir="1"
+                  aria-label="Ver los mensajes siguientes" aria-controls="muroPista">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                 stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
+                 aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+          </button>
+        </div>
+
+        {# tabindex="0" para que se pueda recorrer con el teclado: un div con
+           scroll no recibe foco solo, y sin foco las flechas no lo mueven. #}
+        <div class="muro muro--carrusel" id="muroPista" data-muro
+             data-muro-limite="{{ muro_limite }}"
+             tabindex="0" role="region" aria-label="Mensajes de la comunidad">
+          {% for m in muro %}
+          <article class="deseo">
+            <p class="deseo__texto">{{ m.mensaje }}</p>
+            <div class="deseo__pie">
+              <span class="deseo__autor">{{ m.nickname }}</span>
+              <span class="deseo__fecha">{{ m.cuando }}</span>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="muro__vacio" data-muro-vacio {% if muro %}hidden{% endif %}>
+        {% if negocio.mascotas %}<img src="{{ mascota('mano.png', 'muro') }}" alt="" aria-hidden="true" />{% endif %}
+        <p style="margin:0 0 var(--sp-2)"><b>El muro está esperando el primero.</b></p>
+        <p style="margin:0;font-size:.88rem">Deja tu mensaje y lo publicamos apenas lo revisemos.</p>
+      </div>
+
+      <p class="muro__pie" data-muro-pie {% if not muro %}hidden{% endif %}>
+        <a class="btn btn--outline" href="{{ url_for('muro') }}">Ver todo el muro</a>
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================ FIDELIZACIÓN ============================ -->
+  <section class="loyalty section" id="puntos">
+    <div class="container">
+      <div class="loyalty__rule" style="position: relative;">
+        <span class="demo-note">Próximamente</span>
+        <span class="section__eyebrow loyalty__rule-eyebrow">Compra tus {{ negocio.puntos.nombre }}</span>
+        <div class="loyalty__rule-big">Recarga tus {{ negocio.puntos.nombre }}</div>
+        <p class="loyalty__rule-text">Suma {{ negocio.puntos.nombre }} con cada compra y recárgalos por adelantado: mientras más recargas, más rinden. Sin tarjetas ni complicaciones, y no vencen.</p>
+        {% if negocio.mascotas %}<img class="mascot mascot--puntos" src="{{ mascota('brindis.png', 'puntos') }}" alt="" aria-hidden="true" />{% endif %}
+      </div>
+
+      <div class="loyalty__steps">
+        <div class="step">
+          <div class="step__num">1</div>
+          <h3 class="step__title">Elige</h3>
+          <p class="step__text">Compra tus insumos en la tienda o pídelos online para retirar.</p>
+        </div>
+        <div class="step">
+          <div class="step__num">2</div>
+          <h3 class="step__title">Recarga</h3>
+          <p class="step__text">Recarga tus {{ negocio.puntos.nombre }} por adelantado y rinden más gracias al bono por volumen.</p>
+        </div>
+        <div class="step">
+          <div class="step__num">3</div>
+          <h3 class="step__title">Canjea</h3>
+          <p class="step__text">Usa tus puntos para descontar cartuchos, tintas y todo lo del catálogo.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ UBICACIÓN ============================ -->
+  <section class="section" id="ubicacion">
+    <div class="container">
+      <span class="section__eyebrow">Visítanos</span>
+      <h2 class="section__title">Encuéntranos en {{ negocio.ciudad }}</h2>
+      <div class="map-compact">
+        <div class="map-compact__info">
+          <h3 class="map-compact__title">{{ negocio.direccion }}, {{ negocio.ciudad }}</h3>
+          {#
+            Reseñas de Google: con MARCA_GOOGLE_PLACE_ID en el .env aparece
+            «Dejar una reseña», que abre directo el formulario de reseña del
+            negocio en Google (publicarla pasa allá, con la cuenta de la
+            persona: no hay API para hacerlo desde otro sitio). La nota y el
+            total (MARCA_GOOGLE_NOTA / MARCA_GOOGLE_RESENAS) se escriben a
+            mano; leerlos en vivo pide una clave de Google Cloud con cobro.
+            Sin esos datos no se pinta nada: ni nota inventada ni un botón
+            que lleve a ninguna parte.
+          #}
+          {% set g = negocio.google %}
+          {% set lugar = negocio.direccion ~ ', ' ~ negocio.ciudad ~ ', ' ~ negocio.pais %}
+          <div class="map-compact__meta">
+            {% if g.nota %}
+            {% if g.place_id %}<a class="map-compact__rating" href="{{ g.resenas_url }}" target="_blank" rel="noopener">{% else %}<span class="map-compact__rating">{% endif %}★ {{ g.nota }}{% if g.resenas %} <span class="map-compact__rating-count">({{ g.resenas }} reseñas en Google)</span>{% endif %}{% if g.place_id %}</a>{% else %}</span>{% endif %}
+            {% endif %}
+            <span class="map-compact__hours">{{ negocio.horario | join(' · ') }}</span>
+          </div>
+          <div class="map-compact__acciones">
+            <a class="btn btn--dark btn--sm" href="https://www.google.com/maps/dir/?api=1&destination={{ lugar | urlencode }}" target="_blank" rel="noopener">Cómo llegar</a>
+            {% if g.place_id %}
+            <a class="btn btn--outline btn--sm map-compact__resena" href="{{ g.resena_url }}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg>Dejar una reseña</a>
+            {% endif %}
+          </div>
+          {% if g.place_id %}
+          <p class="map-compact__invita">¿Ya nos visitaste? Tu reseña en Google nos ayuda a que más gente encuentre {{ negocio.nombre_corto }}.</p>
+          {% endif %}
+        </div>
+        <a class="map-compact__frame" href="https://www.google.com/maps/search/?api=1&query={{ lugar | urlencode }}" target="_blank" rel="noopener" aria-label="Abrir ubicación en Google Maps">
+          <iframe src="https://www.google.com/maps?q={{ lugar | urlencode }}&output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Ubicación {{ negocio.nombre }}"></iframe>
+        </a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ============================ FOOTER ============================ -->
+<footer class="footer">
+  <div class="container footer__grid">
+    <div>
+      <img class="footer__logo" src="{{ url_for('static', filename=negocio.logo) }}" alt="" />
+      <div class="footer__brand-name">{{ negocio.nombre_corto }}<br/>{{ negocio.tag|title }}</div>
+      <p class="footer__text">{{ negocio.lema }}. {{ negocio.ciudad }}, {{ negocio.pais }}.</p>
+    </div>
+    <div>
+      <h4 class="footer__title">Explorar</h4>
+      <ul class="footer__list">
+        <li><a class="footer__link" href="#carta">Catálogo</a></li>
+        {% if barra_activa() %}<li><a class="footer__link" href="{{ url_for('pedir') }}">Pedir para retirar</a></li>{% endif %}
+        {% if negocio.tienda_url %}<li><a class="footer__link" href="#tienda">Tienda online</a></li>{% endif %}
+        <li><a class="footer__link" href="#talleres">Cursos</a></li>
+        <li><a class="footer__link" href="#puntos">Puntos</a></li>
+        <li><a class="footer__link" href="#muro">Comunidad</a></li>
+        <li><a class="footer__link" href="#nosotros">Quiénes somos</a></li>
+        <li><a class="footer__link" href="#ubicacion">Ubicación</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4 class="footer__title">Visítanos</h4>
+      <p class="footer__text" style="max-width: none;">
+        {{ negocio.direccion }}, {{ negocio.ciudad }}<br/>
+        {{ negocio.region }}, {{ negocio.pais }}<br/>
+        {% for h in negocio.horario %}{{ h }}{% if not loop.last %}<br/>{% endif %}{% endfor %}
+      </p>
+    </div>
+    {% include '_footer_contacto.html' %}
+  </div>
+  {% include '_footer_credito.html' %}
+</footer>
+
+<script>
+  /* ---- Cierra el menú móvil al navegar ---- */
+  (function () {
+    var nav = document.getElementById('nav');
+    var toggle = document.getElementById('navToggle');
+    nav.addEventListener('click', function (e) {
+      if (e.target.matches('a')) {
+        nav.classList.remove('nav--open');
+        toggle.setAttribute('aria-expanded', 'false');
+      }
+    });
+  })();
+
+  /* ---- Cuenta en el header ---- */
+  (function () {
+    window.__lpHeaderHandled = true;
+    if (typeof lpInitHeader === 'function') lpInitHeader();
+  })();
+
+  /* ---- Gotas de tinta de la animación de entrada ---- */
+  (function () {
+    var wrap = document.getElementById('beansIntro');
+    if (!wrap || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var count = window.innerWidth < 640 ? 12 : 20;
+    var maxEnd = 0;
+    for (var i = 0; i < count; i++) {
+      var bean = document.createElement('span');
+      bean.className = 'bean';
+      var left = Math.random() * 100;
+      var size = 0.7 + Math.random() * 0.7;
+      var duration = 1.3 + Math.random() * 0.7;
+      var delay = Math.random() * 0.5;
+      var spin = Math.random() < 0.5 ? 1 : -1;
+      bean.style.left = left + 'vw';
+      bean.style.transform = 'scale(' + size.toFixed(2) + ')';
+      bean.style.animationDuration = duration + 's';
+      bean.style.animationDelay = delay + 's';
+      bean.style.setProperty('--spin', spin);
+      if (spin < 0) bean.style.animationName = 'beanFallRev';
+      wrap.appendChild(bean);
+      maxEnd = Math.max(maxEnd, duration + delay);
+    }
+    setTimeout(function () { wrap.remove(); }, (maxEnd + 0.3) * 1000);
+  })();
+
+  /* ---- Render de la carta con pestañas ---- */
+  function mostrarEstadoCarta(titulo, texto) {
+    var tabsEl = document.getElementById('cartaTabs');
+    var gridEl = document.getElementById('cartaGrid');
+    var estadoEl = document.getElementById('cartaEstado');
+
+    tabsEl.innerHTML = '';
+    gridEl.innerHTML = '';
+    tabsEl.hidden = true;
+    gridEl.hidden = true;
+    document.getElementById('cartaEstadoTitulo').textContent = titulo;
+    document.getElementById('cartaEstadoTexto').textContent = texto;
+    estadoEl.hidden = false;
+  }
+
+  function montarCarta(MENU) {
+    var tabsEl = document.getElementById('cartaTabs');
+    var gridEl = document.getElementById('cartaGrid');
+    var estadoEl = document.getElementById('cartaEstado');
+
+    /* Una lista vacía es un estado válido de la base, no una caída. Mostrar
+       productos escritos a mano acá haría parecer que todavía se venden. */
+    if (!Array.isArray(MENU) || !MENU.length) {
+      mostrarEstadoCarta(
+        'El catálogo está en preparación.',
+        'Todavía no hay productos publicados. Vuelve pronto.'
+      );
+      return;
+    }
+
+    tabsEl.hidden = false;
+    gridEl.hidden = false;
+    estadoEl.hidden = true;
+
+    function formatCLP(clp) { return '$' + clp.toLocaleString('es-CL'); }
+
+    function renderCategory(cat) {
+      gridEl.innerHTML = cat.items.map(function (it) {
+        var tag = it.agotado
+          ? '<span class="menu-item__tag menu-item__tag--agotado">Agotado</span>'
+          : (it.tag ? '<span class="menu-item__tag">' + it.tag + '</span>' : '');
+        return '' +
+          '<article class="menu-item menu-item--no-media' + (it.agotado ? ' menu-item--agotado' : '') + '">' +
+            '<div class="menu-item__body">' +
+              '<div class="menu-item__head"><h3 class="menu-item__name">' + it.name + '</h3>' + tag + '</div>' +
+              '<p class="menu-item__desc">' + (it.desc || '') + '</p>' +
+              '<div class="price">' +
+                '<span class="price__clp">' + formatCLP(it.clp) + ' CLP</span>' +
+              '</div>' +
+            '</div>' +
+          '</article>';
+      }).join('');
+    }
+
+    function setActive(id) {
+      Array.prototype.forEach.call(tabsEl.children, function (btn) {
+        var on = btn.dataset.id === id;
+        btn.classList.toggle('carta__tab--active', on);
+        btn.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      var cat = MENU.filter(function (c) { return c.id === id; })[0];
+      if (cat) renderCategory(cat);
+    }
+
+    tabsEl.innerHTML = MENU.map(function (c) {
+      return '<button class="carta__tab" role="tab" data-id="' + c.id + '">' + c.label + '</button>';
+    }).join('');
+
+    tabsEl.addEventListener('click', function (e) {
+      var btn = e.target.closest('.carta__tab');
+      if (btn) setActive(btn.dataset.id);
+    });
+
+    setActive(MENU[0].id);
+  }
+
+  /* ---- La carta se pide a la base de datos ----
+     Vacía y caída son estados distintos. Ninguno usa precios escritos a mano:
+     una carta desactualizada puede prometer productos o valores incorrectos. */
+  (function () {
+    fetch('/api/v1/menu?marca={{ negocio.slug }}', { headers: { Accept: 'application/json' } })
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function (datos) {
+        if (!Array.isArray(datos)) throw new Error('respuesta inesperada');
+        montarCarta(datos);
+      })
+      .catch(function (err) {
+        console.warn('[catalogo] la API no respondió:', err.message);
+        mostrarEstadoCarta(
+          'No pudimos cargar el catálogo.',
+          'Intenta nuevamente en unos minutos.'
+        );
+      });
+  })();
+
+  /* Las maquetas de la versión estática (mural, calendario y registro de
+     ejemplo) se sacaron: hoy esas secciones son reales y viven en sus
+     propios archivos (muro.js, agenda.js, /registro). */
+</script>
+
+<!-- ============================ VOLVER ARRIBA ============================ -->
+<button class="to-top" id="toTop" type="button" aria-label="Volver arriba">
+  <svg class="to-top__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+       stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M12 19V5"/><path d="M5 12l7-7 7 7"/>
+  </svg>
+</button>
+
+<script>
+(function(){
+  var btn = document.getElementById("toTop");
+  if (!btn) return;
+
+  var SHOW_AT = 400;   /* px de scroll antes de que aparezca */
+  var ticking = false;
+
+  function update(){
+    btn.classList.toggle("to-top--visible", window.scrollY > SHOW_AT);
+    ticking = false;
+  }
+
+  window.addEventListener("scroll", function(){
+    if (!ticking) { ticking = true; window.requestAnimationFrame(update); }
+  }, { passive: true });
+
+  btn.addEventListener("click", function(){
+    var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+  });
+
+  update();
+})();
+</script>
+<script src="{{ url_for('static', filename='js/tienda-productos.js') }}"></script>
+{% if tienda %}
+{# El catálogo de Shopify pisa al respaldo. Va acá, inline y síncrono, y no
+   por fetch: el modal de elección rápida se inicializa unas líneas más abajo
+   y tiene que encontrar ya los precios buenos. Con un fetch alcanzaría a
+   abrirse con los del respaldo. #}
+<script>window.LP_TIENDA.cargar({{ tienda | tojson }});</script>
+{% endif %}
+{# Filtro por categoría de la tienda. Se filtra en el navegador y no en el
+   servidor a propósito: el catálogo son ocho productos que ya están en la
+   página, así que cambiar de pastilla es instantáneo y no recarga ni pierde
+   la posición del scroll. Si algún día son cientos, esto se cambia por una
+   consulta al servidor y las pastillas siguen igual. #}
+<script>
+  (function () {
+    var tabs = document.getElementById('shopTabs');
+    var grid = document.getElementById('shopGrid');
+    if (!tabs || !grid) return;   // una sola categoría, o el respaldo
+
+    var tarjetas = Array.prototype.slice.call(grid.children);
+
+    tabs.addEventListener('click', function (e) {
+      var btn = e.target.closest('.shop__tab');
+      if (!btn) return;
+      var cat = btn.dataset.cat;
+
+      Array.prototype.forEach.call(tabs.children, function (b) {
+        var on = b === btn;
+        b.classList.toggle('shop__tab--active', on);
+        b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+
+      tarjetas.forEach(function (t) {
+        // cat === '' es «Todos». `hidden` y no una clase: el estado queda en
+        // el DOM y el lector de pantalla se salta la tarjeta oculta.
+        // «__especiales» es la pastilla de los destacados del panel.
+        t.hidden = cat === '__especiales' ? !t.dataset.especial
+                                          : (!!cat && t.dataset.categoria !== cat);
+      });
+    });
+  })();
+</script>
+<script src="{{ url_for('static', filename='js/carrito.js') }}"></script>
+<script src="{{ url_for('static', filename='js/tienda-rapida.js') }}"></script>
+<script src="{{ url_for('static', filename='js/agenda.js') }}"></script>
+<script src="{{ url_for('static', filename='js/muro.js') }}"></script>
+<script src="{{ url_for('static', filename='js/promo.js') }}"></script>
+</body>
+</html>

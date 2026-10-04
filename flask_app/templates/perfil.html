@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% block title %}Mi perfil · {{ negocio.nombre }}{% endblock %}
+{% block descripcion %}Edita tus datos personales.{% endblock %}
+{% block contenido %}
+<main class="section"><div class="container" style="max-width:640px">
+
+{# El bloque «inicia sesión para editar» ya no existe: la ruta va detrás de
+   @requiere_sesion, así que a esta página no se llega sin sesión. #}
+
+<div class="profile-grid">
+  <span class="profile-grid__avatar">{{ session.usuario.iniciales }}</span>
+  <div>
+    <div class="profile-grid__name">{{ cuenta.nombre }} {{ cuenta.apellido or '' }}</div>
+    <div class="profile-grid__email">{{ cuenta.email }}</div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:var(--sp-5)">
+  <h3 class="card__title">Datos personales</h3>
+  <form method="POST" action="{{ url_for('perfil') }}" novalidate>
+    <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+    <input type="hidden" name="accion" value="datos" />
+
+    <div class="field">
+      <label class="field__label" for="perfName">Nombre</label>
+      <input class="field__input" id="perfName" name="nombre" type="text"
+             maxlength="45" autocomplete="given-name" value="{{ cuenta.nombre or '' }}" />
+    </div>
+
+    <div class="field">
+      <label class="field__label" for="perfNick">Nombre para mostrar</label>
+      <input class="field__input" id="perfNick" name="nickname" type="text"
+             maxlength="45" required autocomplete="nickname"
+             value="{{ usuario.nickname or '' }}" />
+      <p style="margin:6px 0 0;font-size:.8rem;color:var(--text-muted)">
+        Con este nombre firmas en el muro. Cambiarlo no toca lo que ya
+        publicaste.
+      </p>
+    </div>
+
+    <div class="field">
+      <label class="field__label" for="perfLast">Apellido</label>
+      <input class="field__input" id="perfLast" name="apellido" type="text"
+             maxlength="45" autocomplete="family-name" value="{{ cuenta.apellido or '' }}" />
+    </div>
+
+    <div class="field">
+      <label class="field__label" for="perfEmail">Correo</label>
+      <input class="field__input" id="perfEmail" type="email"
+             value="{{ cuenta.email }}" disabled />
+      {# Deshabilitado a propósito: el correo es la llave con la que inicias
+         sesión. Cambiarlo sin verificar el nuevo permitiría que alguien que
+         te pille la sesión abierta se quede con la cuenta. Llega cuando
+         exista el envío de correos. #}
+      <p class="field__hint">Para cambiar tu correo, escríbenos a {{ negocio.correo }}</p>
+    </div>
+
+    <div class="field">
+      <label class="field__label" for="perfPhone">Teléfono</label>
+      <input class="field__input" id="perfPhone" name="telefono" type="tel"
+             maxlength="20" autocomplete="tel" value="{{ cuenta.telefono or '' }}" />
+      <p class="field__hint">Con esto te identificamos en el mesón.</p>
+    </div>
+
+    <div class="field">
+      <label class="field__label" for="perfRut">RUT <span style="font-weight:400;color:var(--text-muted)">(opcional)</span></label>
+      <input class="field__input" id="perfRut" name="rut" type="text"
+             maxlength="12" placeholder="12.345.678-9" value="{{ rut_formateado }}" />
+      <p class="field__hint" id="perfRutHint">Solo si quieres boleta a tu nombre.</p>
+    </div>
+
+    <button class="btn btn--primary" type="submit">Guardar cambios</button>
+  </form>
+</div>
+
+<div class="card" style="margin-bottom:var(--sp-5)">
+  <h3 class="card__title">Cambiar contraseña</h3>
+  <form method="POST" action="{{ url_for('perfil') }}" novalidate>
+    <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+    <input type="hidden" name="accion" value="clave" />
+
+    <div class="field">
+      <label class="field__label" for="perfOldPass">Contraseña actual</label>
+      <input class="field__input" id="perfOldPass" name="password_actual"
+             type="password" autocomplete="current-password" required />
+    </div>
+
+    <div class="field">
+      <label class="field__label" for="perfNewPass">Contraseña nueva</label>
+      <input class="field__input" id="perfNewPass" name="password" type="password"
+             autocomplete="new-password" required minlength="10" />
+      <div class="strength"><div class="strength__bar" id="perfStrengthBar"></div></div>
+      <p class="field__hint" id="perfStrengthLabel">Mínimo 10 caracteres.</p>
+    </div>
+
+    <div class="field">
+      <label class="field__label" for="perfNewPass2">Confirmar contraseña</label>
+      <input class="field__input" id="perfNewPass2" name="password2" type="password"
+             autocomplete="new-password" required />
+      <p class="field__error" id="perfPassError">Las contraseñas no coinciden.</p>
+    </div>
+
+    <button class="btn btn--outline" type="submit">Actualizar contraseña</button>
+  </form>
+</div>
+
+{#
+  Acá había tres interruptores de notificaciones (promociones, eventos, mural).
+  No se guardan en ninguna parte: la tabla usuarios no tiene esas columnas y
+  todavía no existe el envío de correos. Un interruptor que no hace nada es
+  peor que no tenerlo — la persona cree que se dio de baja y le sigue llegando
+  todo. Vuelven cuando haya a qué darse de baja.
+#}
+
+<a class="btn btn--dark btn--block" href="{{ url_for('salir') }}">Cerrar sesión</a>
+
+</div></main>
+{% endblock %}
+
+{% block page_js %}
+<script>
+(function () {
+  'use strict';
+  var clave = document.getElementById('perfNewPass');
+  var confirmar = document.getElementById('perfNewPass2');
+  var aviso = document.getElementById('perfPassError');
+  var pista = document.getElementById('perfStrengthLabel');
+  var barra = document.getElementById('perfStrengthBar');
+  var rut = document.getElementById('perfRut');
+  var pistaRut = document.getElementById('perfRutHint');
+
+  function bytes(t) { return new TextEncoder().encode(t).length; }
+
+  if (clave) {
+    clave.addEventListener('input', function () {
+      var v = clave.value;
+      if (!v) { barra.style.width = '0'; pista.textContent = 'Mínimo 10 caracteres.'; return; }
+      var b = bytes(v);
+      if (b > 72) {
+        barra.style.width = '100%';
+        pista.textContent = 'Demasiado larga: ' + b + ' de 72 bytes (las tildes cuentan doble).';
+        return;
+      }
+      var puntos = 0;
+      if (v.length >= 10) puntos++;
+      if (v.length >= 14) puntos++;
+      if (/[a-z]/.test(v) && /[A-Z]/.test(v)) puntos++;
+      if (/[0-9]/.test(v)) puntos++;
+      if (/[^A-Za-z0-9]/.test(v)) puntos++;
+      var etiquetas = ['Muy débil', 'Débil', 'Aceptable', 'Buena', 'Fuerte'];
+      barra.style.width = (puntos / 5 * 100) + '%';
+      pista.textContent = v.length < 10
+        ? 'Te faltan ' + (10 - v.length) + ' caracteres.'
+        : etiquetas[Math.max(0, puntos - 1)];
+    });
+  }
+
+  if (confirmar) {
+    confirmar.addEventListener('input', function () {
+      aviso.style.display = (confirmar.value && clave.value !== confirmar.value) ? 'block' : 'none';
+    });
+  }
+
+  function digitoEsperado(cuerpo) {
+    var suma = 0, mult = 2;
+    for (var i = cuerpo.length - 1; i >= 0; i--) {
+      suma += parseInt(cuerpo[i], 10) * mult;
+      mult = mult === 7 ? 2 : mult + 1;
+    }
+    var resto = 11 - (suma % 11);
+    return resto === 11 ? '0' : resto === 10 ? 'K' : String(resto);
+  }
+
+  if (rut) {
+    rut.addEventListener('blur', function () {
+      var v = rut.value.trim();
+      if (!v) { pistaRut.textContent = 'Solo si quieres boleta a tu nombre.'; return; }
+      var limpio = v.replace(/[^0-9kK]/g, '').toUpperCase();
+      var cuerpo = limpio.slice(0, -1).replace(/^0+/, '');
+      var dv = limpio.slice(-1);
+      if (cuerpo.length < 6 || digitoEsperado(cuerpo) !== dv) {
+        pistaRut.textContent = 'Revisa el RUT: el dígito verificador no calza.';
+        return;
+      }
+      rut.value = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + '-' + dv;
+      pistaRut.textContent = 'RUT válido.';
+    });
+  }
+}());
+</script>
+{% endblock %}

@@ -1,0 +1,35 @@
+{#
+  Los colores de la marca, encima de los tokens del sistema de diseño.
+
+  Todo el CSS del proyecto usa variables (--accent, --text-strong,
+  --surface-page…), así que redefinir cinco acá repinta el sitio entero:
+  botones, enlaces, fondos, pastillas de precio. No hay que ir a buscar
+  códigos de color dentro de las hojas de estilo.
+
+  Va en el <head>, DESPUÉS de styles.css, porque en CSS gana la última
+  definición.
+
+  Acá abajo también viaja la dirección de la tienda Shopify. Antes vivía en
+  un static/js/config.js escrito a mano; renderizarla desde el servidor
+  significa que cambiar de tienda es cambiar una línea del .env y no editar
+  un archivo de JavaScript.
+#}
+<style>
+  :root {
+    --accent:          {{ negocio.colores.acento }};
+    --accent-hover:    {{ negocio.colores.acento_hover }};
+    --lp-forest:       {{ negocio.colores.acento }};
+    --lp-forest-600:   {{ negocio.colores.acento_hover }};
+    --lp-forest-900:   {{ negocio.colores.acento_oscuro }};
+    --surface-forest:  {{ negocio.colores.acento }};
+    --lp-coffee-500:   {{ negocio.colores.acento_oscuro }};
+    --text-strong:     {{ negocio.colores.texto }};
+    --lp-espresso:     {{ negocio.colores.texto }};
+    --surface-page:    {{ negocio.colores.fondo }};
+    --lp-cream-100:    {{ negocio.colores.fondo }};
+    --points:          {{ negocio.colores.destacado }};
+    --lp-gold:         {{ negocio.colores.destacado }};
+    --marca2:          {{ negocio.segunda.color }};
+  }
+</style>
+<script>window.SHOPIFY_STORE_URL = "{{ negocio.tienda_url }}";</script>

@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}Crear cuenta · {{ negocio.nombre }}{% endblock %}
+{% block descripcion %}Crea tu cuenta en {{ negocio.nombre }}.{% endblock %}
+{% block contenido %}
+<main class="auth"><div class="auth__card">
+{% if negocio.mascotas %}<img class="auth__mascot" src="{{ mascota('sirviendo.png') }}" alt="" aria-hidden="true" />{% endif %}
+<div class="auth__eyebrow">Crear cuenta</div>
+<h1 class="auth__title">Únete a {{ negocio.nombre_corto }}</h1>
+<p class="auth__lead">Crea tu cuenta para llevar tu saldo de {{ negocio.puntos.nombre }} y tu historial de compras.</p>
+
+{#
+  Acá había un banner que prometía «3.000 {{ negocio.puntos.nombre }} de bienvenida».
+  Venía de la maqueta estática, cuando los puntos se pensaban como premio.
+  Los {{ negocio.puntos.nombre }} se COMPRAN: regalar 3.000 es regalar $30.000 por registro.
+  Si algún día quieres un bono de bienvenida, se decide el monto y sale del
+  bolsillo 'promo' del ledger — no de un texto en el HTML.
+#}
+
+<form method="POST" action="{{ url_for('registro') }}" novalidate>
+<input type="hidden" name="csrf" value="{{ csrf_actual() }}" />
+  <div class="field">
+    <label class="field__label" for="regName">Nombre completo</label>
+    <input class="field__input" id="regName" name="nombre_completo" type="text"
+           placeholder="Tu nombre" autocomplete="name" required
+           value="{{ datos.nombre_completo or '' }}" />
+  </div>
+
+  <div class="field">
+    <label class="field__label" for="regNick">Nombre para mostrar</label>
+    <input class="field__input" id="regNick" name="nickname" type="text"
+           maxlength="45" required autocomplete="nickname"
+           placeholder="Anita, Seba P., lo que quieras"
+           value="{{ datos.nickname or '' }}" />
+    <p class="field__ayuda" style="margin:6px 0 0;font-size:.8rem;color:var(--text-muted)">
+      Con este nombre firmas en el muro de la comunidad. Lo puedes cambiar cuando
+      quieras desde tu perfil.
+    </p>
+  </div>
+
+  <div class="field">
+    <label class="field__label" for="regEmail">Correo</label>
+    <input class="field__input" id="regEmail" name="email" type="email"
+           placeholder="tu@correo.cl" autocomplete="email" required
+           value="{{ datos.email or '' }}" />
+  </div>
+
+  <div class="field">
+    <label class="field__label" for="regRut">RUT <span style="font-weight:400;color:var(--text-muted)">(opcional)</span></label>
+    <input class="field__input" id="regRut" name="rut" type="text"
+           placeholder="12.345.678-9" maxlength="12" inputmode="text"
+           value="{{ datos.rut or '' }}" />
+    <p class="field__hint" id="regRutHint">Solo si quieres boleta a tu nombre.</p>
+  </div>
+
+  <div class="field">
+    <label class="field__label" for="regPhone">Teléfono <span style="font-weight:400;color:var(--text-muted)">(opcional)</span></label>
+    <input class="field__input" id="regPhone" name="telefono" type="tel"
+           placeholder="+56 9 1234 5678" autocomplete="tel" maxlength="20"
+           value="{{ datos.telefono or '' }}" />
+    <p class="field__hint">Con esto te identificamos en el mesón.</p>
+  </div>
+
+  <div class="field">
+    <label class="field__label" for="regPass">Contraseña</label>
+    <input class="field__input" id="regPass" name="password" type="password"
+           autocomplete="new-password" required minlength="10" />
+    <div class="strength"><div class="strength__bar" id="regStrengthBar"></div></div>
+    <p class="field__hint" id="regStrengthLabel">Mínimo 10 caracteres.</p>
+  </div>
+
+  <div class="field" id="regConfirmField">
+    <label class="field__label" for="regConfirm">Confirmar contraseña</label>
+    <input class="field__input" id="regConfirm" name="password2" type="password"
+           autocomplete="new-password" required />
+    <p class="field__error" id="regConfirmError">Las contraseñas no coinciden.</p>
+  </div>
+
+  <div class="checkbox-row">
+    <input type="checkbox" id="regConsent" name="consentimiento" required />
+    <label for="regConsent">Acepto la <a href="#" target="_blank">política de privacidad</a>.</label>
+  </div>
+
+  <button class="btn btn--primary btn--block" type="submit">Crear cuenta</button>
+</form>
+
+<p class="auth__foot">¿Ya tienes cuenta? <a href="{{ url_for('login') }}">Inicia sesión</a></p>
+</div></main>
+{% endblock %}
+
+{% block page_js %}
+<script>
+(function () {
+  'use strict';
+  var clave = document.getElementById('regPass');
+  var confirmar = document.getElementById('regConfirm');
+  var aviso = document.getElementById('regConfirmError');
+  var pista = document.getElementById('regStrengthLabel');
+  var barra = document.getElementById('regStrengthBar');
+  var rut = document.getElementById('regRut');
+  var pistaRut = document.getElementById('regRutHint');
+
+  // Todo lo de acá abajo es cortesía para quien escribe. La validación de
+  // verdad está en el servidor: esto se puede desactivar con dos clicks.
+
+  function bytes(texto) { return new TextEncoder().encode(texto).length; }
+
+  function medirClave() {
+    var v = clave.value;
+    if (!v) { barra.style.width = '0'; pista.textContent = 'Mínimo 10 caracteres.'; return; }
+    // bcrypt corta en 72 BYTES: cada tilde o ñ ocupa dos.
+    var b = bytes(v);
+    if (b > 72) {
+      barra.style.width = '100%'; barra.dataset.nivel = 'malo';
+      pista.textContent = 'Demasiado larga: ' + b + ' de 72 bytes (las tildes cuentan doble).';
+      return;
+    }
+    var puntos = 0;
+    if (v.length >= 10) puntos++;
+    if (v.length >= 14) puntos++;
+    if (/[a-z]/.test(v) && /[A-Z]/.test(v)) puntos++;
+    if (/[0-9]/.test(v)) puntos++;
+    if (/[^A-Za-z0-9]/.test(v)) puntos++;
+    var etiquetas = ['Muy débil', 'Débil', 'Aceptable', 'Buena', 'Fuerte'];
+    barra.style.width = (puntos / 5 * 100) + '%';
+    pista.textContent = v.length < 10
+      ? 'Te faltan ' + (10 - v.length) + ' caracteres.'
+      : etiquetas[Math.max(0, puntos - 1)];
+  }
+
+  function compararClaves() {
+    var distintas = confirmar.value && clave.value !== confirmar.value;
+    aviso.style.display = distintas ? 'block' : 'none';
+  }
+
+  if (clave) clave.addEventListener('input', function () { medirClave(); compararClaves(); });
+  if (confirmar) confirmar.addEventListener('input', compararClaves);
+
+  // --- RUT: mismo módulo 11 que valida el servidor ---
+  function digitoEsperado(cuerpo) {
+    var suma = 0, mult = 2;
+    for (var i = cuerpo.length - 1; i >= 0; i--) {
+      suma += parseInt(cuerpo[i], 10) * mult;
+      mult = mult === 7 ? 2 : mult + 1;
+    }
+    var resto = 11 - (suma % 11);
+    return resto === 11 ? '0' : resto === 10 ? 'K' : String(resto);
+  }
+
+  if (rut) {
+    rut.addEventListener('blur', function () {
+      var v = rut.value.trim();
+      if (!v) { pistaRut.textContent = 'Solo si quieres boleta a tu nombre.'; return; }
+      var limpio = v.replace(/[^0-9kK]/g, '').toUpperCase();
+      var cuerpo = limpio.slice(0, -1).replace(/^0+/, '');
+      var dv = limpio.slice(-1);
+      if (cuerpo.length < 6 || digitoEsperado(cuerpo) !== dv) {
+        pistaRut.textContent = 'Revisa el RUT: el dígito verificador no calza.';
+        return;
+      }
+      // Lo dejamos escrito con puntos, como se lee en Chile.
+      rut.value = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + '-' + dv;
+      pistaRut.textContent = 'RUT válido.';
+    });
+  }
+}());
+</script>
+{% endblock %}

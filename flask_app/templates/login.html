@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Iniciar sesión · {{ negocio.nombre }}{% endblock %}
+{% block descripcion %}Inicia sesión en tu cuenta {{ negocio.nombre }}.{% endblock %}
+{% block contenido %}
+<main class="auth"><div class="auth__card">
+{% if negocio.mascotas %}<img class="auth__mascot" src="{{ mascota('mano.png') }}" alt="" aria-hidden="true" />{% endif %}
+<div class="auth__eyebrow">Iniciar sesión</div>
+<h1 class="auth__title">Bienvenido de vuelta</h1>
+<p class="auth__lead">Ingresa para ver tus {{ negocio.puntos.nombre }} y tu historial.</p>
+
+<form id="loginForm" method="POST" action="{{ url_for('login') }}" novalidate>
+{# csrf_actual() es la función que pasa el context processor, no un token ya
+   evaluado: se llama acá y no antes para no ponerle cookie de sesión a todo
+   el que abre la portada. #}
+<input type="hidden" name="csrf" value="{{ csrf_actual() }}" />
+<div class="field"><label class="field__label" for="loginEmail">Correo</label><input class="field__input" id="loginEmail" name="email" type="email" placeholder="tu@correo.cl" required autocomplete="username" autocapitalize="none" spellcheck="false" /></div>
+<div class="field"><label class="field__label" for="loginPass">Contraseña</label><input class="field__input" id="loginPass" name="password" type="password" required autocomplete="current-password" enterkeyhint="go" /></div>
+<div class="field__between"><label class="remember"><input type="checkbox" name="recordarme" value="1" checked /> Recordarme</label><a href="{{ url_for('recuperar_password') }}">¿Olvidaste tu contraseña?</a></div>
+<button class="btn btn--primary btn--block" type="submit">Iniciar sesión</button>
+</form>
+<p class="auth__foot">¿Aún no tienes cuenta? <a href="{{ url_for('registro') }}">Regístrate</a></p>
+</div></main>
+{% endblock %}

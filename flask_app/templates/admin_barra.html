@@ -1,0 +1,340 @@
+{% extends "base.html" %}
+{% block title %}Pedidos para retiro · {{ negocio.nombre }}{% endblock %}
+{% block descripcion %}La cola de pedidos para retirar.{% endblock %}
+
+{% block head_extra %}
+<style>
+  /* =====================================================================
+     La cola de la barra. Se usa con las manos ocupadas y alguien esperando,
+     muchas veces desde el celular apoyado al lado de la máquina: un botón
+     grande por pedido con EL siguiente paso, y lo demás chico y aparte.
+     ===================================================================== */
+  .barra { max-width: 860px; }
+  .barra__cab { display: flex; flex-wrap: wrap; gap: var(--sp-3); align-items: center;
+    justify-content: space-between; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; font-size: .75rem;
+    font-weight: var(--fw-bold); padding: 5px 12px; border-radius: var(--r-pill); }
+  .pill--on { background: #E7F0E9; color: #1D4A31; }
+  .pill--off { background: var(--surface-sand); color: var(--text-muted); }
+  .pill__punto { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+
+  .dias { display: flex; gap: var(--sp-2); overflow-x: auto; margin: var(--sp-5) 0 0;
+    padding-bottom: 4px; }
+  .dias a { flex: none; padding: 8px 14px; border-radius: var(--r-pill); font-size: .82rem;
+    text-decoration: none; color: var(--lp-espresso); border: var(--bw) solid var(--border-strong);
+    }
+  .dias a[aria-current] { background: var(--lp-espresso); color: var(--lp-cream-50);
+    border-color: var(--lp-espresso); }
+
+  .resumen { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-3);
+    margin-top: var(--sp-4); }
+  @media (min-width: 640px) { .resumen { grid-template-columns: repeat(4, 1fr); } }
+  .resumen__dato { background: var(--surface-card); border: var(--bw) solid var(--border);
+    border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); }
+  .resumen__num { display: block; font-size: 1.35rem; font-weight: var(--fw-bold);
+    color: var(--lp-espresso); }
+  .resumen__et { font-size: .74rem; color: var(--text-muted); }
+
+  .franja__tit { font-family: var(--font-display); font-size: 1.15rem; color: var(--lp-espresso);
+    margin: var(--sp-6) 0 var(--sp-2); font-variant-numeric: tabular-nums; }
+
+  .ped { background: var(--surface-card); border: var(--bw) solid var(--border);
+    border-radius: var(--r-md); padding: var(--sp-4); margin-bottom: var(--sp-3);
+    scroll-margin-top: 90px; }
+  .ped--afuera { border: var(--bw-strong) solid var(--lp-gold); box-shadow: var(--shadow-md); }
+  .ped--fin { opacity: .62; }
+  .ped__cab { display: flex; flex-wrap: wrap; gap: 6px var(--sp-3); align-items: baseline;
+    justify-content: space-between; }
+  .ped__nombre { font-weight: var(--fw-bold); color: var(--lp-espresso); font-size: 1.05rem;
+    overflow-wrap: anywhere; }
+  .ped__codigo { font-size: .72rem; color: var(--text-muted); letter-spacing: .06em; }
+  .etq { display: inline-block; font-size: .68rem; font-weight: var(--fw-bold);
+    text-transform: uppercase; letter-spacing: .04em; padding: 3px 9px;
+    border-radius: var(--r-pill); background: var(--surface-sand); color: var(--lp-coffee-600); }
+  .etq--recibido { background: var(--lp-gold-bg); color: #9B0D23; }
+  .etq--listo { background: #E7F0E9; color: #1D4A31; }
+  .ped__afuera { margin: var(--sp-2) 0 0; padding: 6px 10px; border-radius: var(--r-sm);
+    background: var(--lp-gold-bg); color: #9B0D23; font-size: .85rem; font-weight: var(--fw-semibold); }
+  .ped__ojo { margin: var(--sp-2) 0 0; font-size: .8rem; color: #8A2E22; }
+  .ped__items { margin: var(--sp-2) 0 0; color: var(--text-body); font-size: .92rem; line-height: 1.5; }
+  .ped__notas { margin: 4px 0 0; color: var(--text-muted); font-size: .85rem; font-style: italic; }
+  .ped__plata { margin: var(--sp-2) 0 0; font-size: .85rem; color: var(--text-muted); }
+  .ped__plata b { color: var(--lp-espresso); }
+
+  .ped__acciones { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center;
+    margin-top: var(--sp-3); }
+  .ped__acciones form { margin: 0; }
+  .ped__principal { flex: 1 1 100%; }
+  .ped__principal .btn { width: 100%; }
+  @media (min-width: 640px) { .ped__principal { flex: 0 0 auto; } .ped__principal .btn { width: auto; } }
+  .lnk { background: none; border: 0; padding: 6px 4px; font: inherit; font-size: .8rem;
+    color: var(--text-muted); text-decoration: underline; cursor: pointer; }
+  .lnk:hover { color: var(--lp-espresso); }
+
+  .vacio { margin-top: var(--sp-6); padding: var(--sp-6); text-align: center; color: var(--text-muted);
+    border: var(--bw) dashed var(--border-strong); border-radius: var(--r-md); }
+
+  /* --- Configuración ------------------------------------------------- */
+  .conf { margin-top: var(--sp-7); background: var(--surface-card); border: var(--bw) solid var(--border);
+    border-radius: var(--r-md); scroll-margin-top: 90px; }
+  .conf > summary { cursor: pointer; padding: var(--sp-4) var(--sp-5); font-weight: var(--fw-bold);
+    color: var(--lp-espresso); }
+  .conf__cuerpo { padding: 0 var(--sp-5) var(--sp-5); }
+  .conf__grid { display: grid; gap: 0 var(--sp-4); }
+  @media (min-width: 640px) { .conf__grid { grid-template-columns: 1fr 1fr; } }
+  .chequeos { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+  .chequeo { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px;
+    border: var(--bw) solid var(--border-strong); border-radius: var(--r-pill); font-size: .85rem;
+    cursor: pointer; }
+  .chequeo input { margin: 0; }
+  .interruptor { display: flex; gap: var(--sp-3); align-items: flex-start; padding: var(--sp-4);
+    border-radius: var(--r-md); background: var(--surface-sand); margin-bottom: var(--sp-5); }
+  .interruptor input { width: 20px; height: 20px; margin-top: 2px; flex: none; }
+  .enlace { display: flex; gap: var(--sp-2); flex-wrap: wrap; align-items: center; margin-top: var(--sp-3);
+    font-size: .82rem; color: var(--text-muted); }
+  .enlace code { background: var(--surface-sand); padding: 4px 8px; border-radius: var(--r-xs);
+    overflow-wrap: anywhere; }
+</style>
+{% endblock %}
+
+{% block contenido %}
+{# Los botones chicos de cada pedido (cancelar, no vino, deshacer). #}
+{% macro accion(pid, estado, texto) %}
+<form method="POST" action="{{ url_for('admin_barra_estado', pedido_id=pid) }}">
+  <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+  <input type="hidden" name="dia" value="{{ dia.isoformat() }}" />
+  <input type="hidden" name="estado" value="{{ estado }}" />
+  <button class="lnk" type="submit">{{ texto }}</button>
+</form>
+{% endmacro %}
+
+<main class="section"><div class="container barra">
+  <div class="auth__eyebrow">Administración</div>
+  <div class="barra__cab">
+    <h1 style="margin:6px 0 0">Pedidos para retiro</h1>
+    {% if cfg.activo %}
+    <span class="pill pill--on"><span class="pill__punto"></span>Recibiendo pedidos</span>
+    {% else %}
+    <span class="pill pill--off"><span class="pill__punto"></span>Cerrados</span>
+    {% endif %}
+  </div>
+
+  <nav class="dias" aria-label="Día">
+    {% for d in navegables %}
+    <a href="{{ url_for('admin_barra', dia=d.fecha.isoformat()) }}"
+       {% if d.fecha == dia %}aria-current="page"{% endif %}>{{ d.texto }}</a>
+    {% endfor %}
+  </nav>
+
+  <div class="resumen">
+    <div class="resumen__dato"><span class="resumen__num">{{ total_pedidos }}</span><span class="resumen__et">pedido{{ 's' if total_pedidos != 1 }}</span></div>
+    <div class="resumen__dato"><span class="resumen__num">{{ vivos }}</span><span class="resumen__et">en curso</span></div>
+    <div class="resumen__dato"><span class="resumen__num">${{ por_cobrar | miles }}</span><span class="resumen__et">por cobrar</span></div>
+    <div class="resumen__dato"><span class="resumen__num">${{ cobrado | miles }}</span><span class="resumen__et">cobrado</span></div>
+  </div>
+
+  {% if not grupos %}
+  <div class="vacio">
+    {% if cfg.activo %}No hay pedidos para este día todavía. Esta página se actualiza sola cuando entra uno.
+    {% else %}No hay pedidos para este día. Los pedidos están cerrados: ábrelos en la configuración de abajo.{% endif %}
+  </div>
+  {% endif %}
+
+  {% for g in grupos %}
+  <h2 class="franja__tit">{{ g.hora }}</h2>
+  {% for p in g.pedidos %}
+  {% set vivo = p.estado in ('recibido', 'preparando', 'listo') %}
+  <article class="ped{{ ' ped--afuera' if vivo and p.afuera_at }}{{ ' ped--fin' if not vivo }}" id="pedido-{{ p.id }}">
+    <div class="ped__cab">
+      <span class="ped__nombre">{{ p.nombre }} <span class="ped__codigo">{{ p.codigo }}</span></span>
+      <span class="etq etq--{{ p.estado }}">{{ p.titulo }}</span>
+    </div>
+    {% if vivo and p.afuera_at %}
+    <p class="ped__afuera">Está afuera desde las {{ p.afuera_hace }}{% if p.afuera_detalle %} · {{ p.afuera_detalle }}{% endif %}</p>
+    {% endif %}
+    {% if p.veces_no_retiro %}
+    <p class="ped__ojo">Ojo: este número no retiró {{ p.veces_no_retiro }} {{ 'vez' if p.veces_no_retiro == 1 else 'veces' }} antes.</p>
+    {% endif %}
+    <p class="ped__items">
+      {% for it in p['items'] %}<b>{{ it.cantidad }}×</b> {{ it.nombre }}{% if not loop.last %} · {% endif %}{% endfor %}
+    </p>
+    {% if p.notas %}<p class="ped__notas">«{{ p.notas }}»</p>{% endif %}
+    <p class="ped__plata">
+      <b>${{ p.total_clp | miles }}</b> ·
+      {% if p.pagado_at %}cobrado{% elif vivo %}paga al retirar{% else %}sin cobro{% endif %}
+    </p>
+
+    <div class="ped__acciones">
+      {% if p.siguiente %}
+      <form method="POST" action="{{ url_for('admin_barra_estado', pedido_id=p.id) }}" class="ped__principal">
+        <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+        <input type="hidden" name="dia" value="{{ dia.isoformat() }}" />
+        <input type="hidden" name="estado" value="{{ p.siguiente }}" />
+        <button class="btn btn--primary" type="submit">
+          {% if p.siguiente == 'preparando' %}Empezar a juntar
+          {% elif p.siguiente == 'listo' %}Marcar listo
+          {% elif not p.pagado_at %}Entregar y cobrar ${{ p.total_clp | miles }}
+          {% else %}Entregar{% endif %}
+        </button>
+      </form>
+      {% endif %}
+
+      {% if p.wsp %}
+      <a class="btn btn--outline btn--sm" href="{{ p.wsp }}" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+      {% endif %}
+
+      {% if vivo %}
+        {% if p.estado == 'listo' %}{{ accion(p.id, 'no_retirado', 'No vino') }}{% endif %}
+        {{ accion(p.id, 'cancelado', 'Cancelar') }}
+      {% elif p.estado == 'cancelado' %}
+        {{ accion(p.id, 'recibido', 'Reabrir') }}
+      {% else %}
+        {{ accion(p.id, 'listo', 'Deshacer') }}
+      {% endif %}
+
+      {% if p.estado != 'cancelado' %}
+      <form method="POST" action="{{ url_for('admin_barra_pagado', pedido_id=p.id) }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+        <input type="hidden" name="dia" value="{{ dia.isoformat() }}" />
+        <input type="hidden" name="pagado" value="{{ '0' if p.pagado_at else '1' }}" />
+        <button class="lnk" type="submit">{{ 'Quitar cobro' if p.pagado_at else 'Ya pagó' }}</button>
+      </form>
+      {% endif %}
+    </div>
+  </article>
+  {% endfor %}
+  {% endfor %}
+
+  {# ------------------------------------------------------------------
+     Configuración. Abierta mientras los pedidos estén cerrados (es lo
+     primero que hay que hacer); cerrada en el día a día, para que la cola
+     sea lo que se ve.
+     ------------------------------------------------------------------ #}
+  {% if es_admin %}
+  <details class="conf" id="config" {{ 'open' if not cfg.activo }}>
+    <summary>Configuración: horario, cupos y qué se puede pedir</summary>
+    <form class="conf__cuerpo" method="POST" action="{{ url_for('admin_barra_config') }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+
+      <label class="interruptor">
+        <input type="checkbox" name="activo" value="1" {{ 'checked' if cfg.activo }} />
+        <span>
+          <b style="color:var(--lp-espresso)">Recibir pedidos</b><br />
+          <span style="font-size:.85rem;color:var(--text-muted)">Apagado, el enlace «Pedir para retirar» desaparece del catálogo y del pie de página, y /pedir avisa que no se están tomando pedidos. Los pedidos que ya entraron no se tocan.</span>
+        </span>
+      </label>
+
+      <div class="field">
+        <span class="field__label">Días de atención</span>
+        <div class="chequeos">
+          {% for nombre in ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'] %}
+          <label class="chequeo"><input type="checkbox" name="dias" value="{{ loop.index }}" {{ 'checked' if loop.index in cfg.dias }} />{{ nombre }}</label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="conf__grid">
+        <div class="field">
+          <label class="field__label" for="hora_inicio">Primera franja</label>
+          <input class="field__input" type="time" id="hora_inicio" name="hora_inicio" value="{{ cfg.hora_inicio }}" required />
+        </div>
+        <div class="field">
+          <label class="field__label" for="hora_fin">Cierre</label>
+          <input class="field__input" type="time" id="hora_fin" name="hora_fin" value="{{ cfg.hora_fin }}" required />
+          <span class="field__hint">La última franja es la que empieza antes de esta hora.</span>
+        </div>
+        <div class="field">
+          <label class="field__label" for="intervalo_min">Cada cuánto una franja</label>
+          <select class="field__input" id="intervalo_min" name="intervalo_min">
+            {% for m in intervalos %}<option value="{{ m }}" {{ 'selected' if m == cfg.intervalo_min }}>{{ m }} minutos</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label class="field__label" for="cupos_por_franja">Pedidos por franja</label>
+          <input class="field__input" type="number" min="1" max="50" step="1" id="cupos_por_franja" name="cupos_por_franja" value="{{ cfg.cupos_por_franja }}" />
+          <span class="field__hint">Cuántos alcanzas a juntar en ese rato.</span>
+        </div>
+        <div class="field">
+          <label class="field__label" for="max_items">Unidades máximas por pedido</label>
+          <input class="field__input" type="number" min="1" max="50" step="1" id="max_items" name="max_items" value="{{ cfg.max_items }}" />
+        </div>
+        <div class="field">
+          <label class="field__label" for="anticipacion_min">Anticipación mínima (minutos)</label>
+          <input class="field__input" type="number" min="0" max="240" step="5" id="anticipacion_min" name="anticipacion_min" value="{{ cfg.anticipacion_min }}" />
+          <span class="field__hint">Con 20, a las 9:50 la primera hora que se ofrece es 10:15.</span>
+        </div>
+        <div class="field">
+          <label class="field__label" for="dias_adelante">Se puede pedir para</label>
+          <select class="field__input" id="dias_adelante" name="dias_adelante">
+            {% for n, t in [(0, 'Solo hoy'), (1, 'Hoy y mañana'), (2, 'Hasta pasado mañana'), (6, 'Toda la semana')] %}
+            <option value="{{ n }}" {{ 'selected' if n == cfg.dias_adelante }}>{{ t }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <span class="field__label">Qué se puede pedir</span>
+        <div class="chequeos">
+          {% for c in categorias %}
+          <label class="chequeo"><input type="checkbox" name="categorias" value="{{ c.id }}"
+            {{ 'checked' if cfg.categorias is none or c.id in cfg.categorias }} />{{ c.nombre }}</label>
+          {% endfor %}
+          <label class="chequeo"><input type="checkbox" name="incluir_combos" value="1" {{ 'checked' if cfg.incluir_combos }} />Packs vigentes</label>
+        </div>
+        <span class="field__hint">Solo lo disponible de cada categoría. Con todas marcadas, una categoría nueva entra sola.</span>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="lugar_publico">Dónde se retira (lo ve cualquiera)</label>
+        <input class="field__input" id="lugar_publico" name="lugar_publico" maxlength="120" value="{{ cfg.lugar_publico or '' }}" placeholder="Villa Los Robles, {{ negocio.ciudad }}" />
+      </div>
+      <div class="field">
+        <label class="field__label" for="direccion_retiro">Dirección exacta (solo la ve quien ya pidió)</label>
+        <input class="field__input" id="direccion_retiro" name="direccion_retiro" maxlength="200" value="{{ cfg.direccion_retiro or '' }}" placeholder="Pasaje Los Aromos 123, timbre 2" />
+        <span class="field__hint">Aparece en la página del pedido, con un botón para abrirla en el mapa.</span>
+      </div>
+      <div class="field">
+        <label class="field__label" for="aviso">Aviso arriba del formulario (opcional)</label>
+        <input class="field__input" id="aviso" name="aviso" maxlength="300" value="{{ cfg.aviso or '' }}" placeholder="Este sábado cerramos a las 14:00." />
+      </div>
+
+      <button class="btn btn--primary" type="submit">Guardar configuración</button>
+      <div class="enlace">Enlace para compartir: <code>{{ enlace_publico }}</code></div>
+    </form>
+  </details>
+  {% endif %}
+</div></main>
+{% endblock %}
+
+{% block page_js %}
+<script>
+/* La cola se pone al día sola. Cada 20 segundos pregunta una «firma» del
+   día (cuántos pedidos, último cambio, último «estoy afuera») y recarga solo
+   si cambió. Nunca mientras alguien está escribiendo en la configuración:
+   recargar a mitad de eso le borraría lo que estaba cambiando. */
+(function () {
+  var firma = {{ firma | tojson }};
+  var url = {{ url_for('admin_barra_firma', dia=dia.isoformat()) | tojson }};
+  var tituloBase = document.title;
+  var conf = document.getElementById('config');
+  var tocada = false;
+  if (conf) conf.addEventListener('input', function () { tocada = true; });
+
+  function mirar() {
+    if (document.hidden) return;
+    fetch(url, { cache: 'no-store', credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d) return;
+        document.title = (d.nuevos ? '(' + d.nuevos + ') ' : '') + tituloBase;
+        if (d.firma !== firma && !tocada) location.reload();
+      })
+      .catch(function () {});
+  }
+  setInterval(mirar, 20000);
+  document.addEventListener('visibilitychange', mirar);
+  mirar();
+})();
+</script>
+{% endblock %}
