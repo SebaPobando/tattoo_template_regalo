@@ -267,8 +267,7 @@
         <p class="footer__text" style="max-width: none;">
           {{ negocio.direccion }}, {{ negocio.ciudad }}<br/>
           {{ negocio.region }}, {{ negocio.pais }}<br/>
-          Lun–Sáb · 8:30–20:00<br/>
-          Dom · 9:30–14:00
+          {% for h in negocio.horario %}{{ h }}{% if not loop.last %}<br/>{% endif %}{% endfor %}
         </p>
       </div>
       {% include '_footer_contacto.html' %}
